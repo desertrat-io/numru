@@ -1,0 +1,11 @@
+# frozen_string_literal: true
+
+require "rake/extensiontask"
+
+Rake::ExtensionTask.new("numru") do |c|
+  c.lib_dir = "lib/numru"
+end
+
+task :dev do
+  ENV['RB_SYS_CARGO_PROFILE'] = 'dev'
+end
