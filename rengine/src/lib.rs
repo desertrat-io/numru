@@ -6,9 +6,11 @@ pub mod math {
 pub mod data {
     pub mod array;
 }
-pub mod utils {
-    pub mod optypes;
+
+pub mod matrix {
+    pub mod ops;
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
