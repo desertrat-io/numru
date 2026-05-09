@@ -16,18 +16,13 @@
 //! non par non neon implementations
 
 use crate::data::array::Array;
-use crate::utils::optypes::{
-    IntrinsicOp, IntrinsicOp2, IntrinsicOp3, ScalarOp, ScalarOp2, ScalarOp3, VecOp, VecOp2, VecOp3,
+use crate::matrix::ops::{
+    binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3,
 };
 use rayon::prelude::*;
 #[cfg(target_arch = "aarch64")]
-use std::arch::aarch64::{
-    float32x4_t, vaddq_f32, vdivq_f32, vfmaq_f32, vld1q_f32, vmulq_f32, vst1q_f32, vsubq_f32,
-};
+use std::arch::aarch64::{float32x4_t, vaddq_f32, vdivq_f32, vfmaq_f32, vmulq_f32, vsubq_f32};
 use std::arch::aarch64::{vabsq_f32, vnegq_f32, vsqrtq_f32};
-
-const NUM_FLOATS_32: usize = 4;
-const PAR_CHUNK_SIZE: usize = 4096; // BYTES
 
 #[derive(Clone, Copy)]
 pub enum Mode {
@@ -294,154 +289,6 @@ fn log2_scalar_32(value: f32) -> f32 {
 // we could just call this inline
 fn log10_scalar_32(value: f32) -> f32 {
     value.log(10.0)
-}
-
-fn binary_op_1(left: &[f32], result: &mut [f32], op: ScalarOp) {
-    assert_eq!(left.len(), result.len());
-    for i in 0..left.len() {
-        result[i] = op(left[i]);
-    }
-}
-
-fn binary_op_2(left: &[f32], right: &[f32], result: &mut [f32], op: ScalarOp2) {
-    assert_eq!(left.len(), right.len());
-    assert_eq!(left.len(), result.len());
-    for i in 0..left.len() {
-        result[i] = op(left[i], right[i]);
-    }
-}
-
-fn binary_op_3(left: &[f32], middle: &[f32], right: &[f32], result: &mut [f32], op: ScalarOp3) {
-    assert_eq!(left.len(), middle.len());
-    assert_eq!(left.len(), right.len());
-    assert_eq!(left.len(), result.len());
-    for i in 0..left.len() {
-        result[i] = op(left[i], middle[i], right[i]);
-    }
-}
-
-/// conditional intrinsics implementations
-/// 64bit ARM only right now
-/// op is a defined vector operation that define the intrinsic instruction to use
-/// when dealing with a vector. this is abstracted to allow any intrinsic that operates on vectors
-/// the vector registers used are always the same, and all rules regarding size are always the same
-/// registers are managed by the CPU
-fn neon_1(left: &[f32], result: &mut [f32], intrinsic_op: IntrinsicOp, scalar_op: ScalarOp) {
-    assert_eq!(left.len(), result.len());
-    let len = left.len();
-    let mem_chunks = len / NUM_FLOATS_32;
-    unsafe {
-        for i in 0..mem_chunks {
-            let idx = i * NUM_FLOATS_32;
-            let v_left = vld1q_f32(left.as_ptr().add(idx));
-            let v_result = intrinsic_op(v_left);
-            vst1q_f32(result.as_mut_ptr().add(idx), v_result);
-        }
-    }
-
-    for i in (mem_chunks * NUM_FLOATS_32)..len {
-        result[i] = scalar_op(left[i]);
-    }
-}
-fn neon_2(
-    left: &[f32],
-    right: &[f32],
-    result: &mut [f32],
-    intrinsic_op: IntrinsicOp2,
-    scalar_op: ScalarOp2,
-) {
-    assert_eq!(left.len(), right.len());
-    assert_eq!(left.len(), result.len());
-
-    let len = left.len();
-
-    // may need tuning. loads 4 floats at a time
-    let mem_chunks = len / NUM_FLOATS_32;
-
-    // working at the CPU level for faster ops, hence unsafe is needed
-    unsafe {
-        for i in 0..mem_chunks {
-            let idx = i * NUM_FLOATS_32;
-
-            let v_left = vld1q_f32(left.as_ptr().add(idx));
-            let v_right = vld1q_f32(right.as_ptr().add(idx));
-            let v_result = intrinsic_op(v_left, v_right);
-            vst1q_f32(result.as_mut_ptr().add(idx), v_result);
-        }
-    }
-
-    for i in (mem_chunks * NUM_FLOATS_32)..len {
-        result[i] = scalar_op(left[i], right[i]);
-    }
-}
-
-fn neon_3(
-    left: &[f32],
-    middle: &[f32],
-    right: &[f32],
-    result: &mut [f32],
-    intrinsic_op: IntrinsicOp3,
-    scalar_op: ScalarOp3,
-) {
-    assert_eq!(left.len(), middle.len());
-    assert_eq!(left.len(), right.len());
-    assert_eq!(left.len(), result.len());
-    let len = left.len();
-
-    // may need tuning. loads 4 floats at a time
-    let mem_chunks = len / NUM_FLOATS_32;
-
-    // working at the CPU level for faster ops, hence unsafe is needed
-    unsafe {
-        for i in 0..mem_chunks {
-            let idx = i * NUM_FLOATS_32;
-
-            let v_left = vld1q_f32(left.as_ptr().add(idx));
-            let v_middle = vld1q_f32(middle.as_ptr().add(idx));
-            let v_right = vld1q_f32(right.as_ptr().add(idx));
-            let v_result = intrinsic_op(v_left, v_middle, v_right);
-            vst1q_f32(result.as_mut_ptr().add(idx), v_result);
-        }
-    }
-
-    for i in (mem_chunks * NUM_FLOATS_32)..len {
-        result[i] = scalar_op(left[i], middle[i], right[i]);
-    }
-}
-
-fn par_1(left: &[f32], result: &mut [f32], op: VecOp) {
-    assert_eq!(left.len(), result.len());
-    result
-        .par_chunks_mut(PAR_CHUNK_SIZE)
-        .zip(left.par_chunks(PAR_CHUNK_SIZE))
-        .for_each(|(result_chunk, left_chunk)| {
-            op(left_chunk, result_chunk);
-        });
-}
-fn par_2(left: &[f32], right: &[f32], result: &mut [f32], op: VecOp2) {
-    assert_eq!(left.len(), right.len());
-    assert_eq!(left.len(), result.len());
-    result
-        .par_chunks_mut(PAR_CHUNK_SIZE)
-        .zip(left.par_chunks(PAR_CHUNK_SIZE))
-        .zip(right.par_chunks(PAR_CHUNK_SIZE))
-        .for_each(|((result_chunk, left_chunk), right_chunk)| {
-            op(left_chunk, right_chunk, result_chunk);
-        });
-}
-
-fn par_3(left: &[f32], middle: &[f32], right: &[f32], result: &mut [f32], neon_math_op: VecOp3) {
-    let mem_size = 4096; // bytes
-    result
-        .par_chunks_mut(mem_size)
-        .zip(left.par_chunks(mem_size))
-        .zip(middle.par_chunks(mem_size))
-        .zip(right.par_chunks(mem_size))
-        .for_each(
-            |(((result_chunk, left_chunk), middle_chunk), right_chunk)| {
-                neon_math_op(left_chunk, middle_chunk, right_chunk, result_chunk);
-            },
-        );
 }
 
 // convenience function to convert the Array struct to slices

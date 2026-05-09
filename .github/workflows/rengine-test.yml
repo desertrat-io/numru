@@ -16,12 +16,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: MacOS Tahoe Arm
+          - name: MacOS Tahoe Latest Arm
             runner: macos-26
           - name: MacOS 15 Arm
             runner: macos-15
-          - name: Ubuntu 24 Arm
-            runner: ubuntu-24.04-arm64
 
     runs-on: ${{ matrix.runner }}
     env:
