@@ -15,18 +15,19 @@ you'll never
 be able to properly review what an AI spits out.
 
 If you strip away hype and excitement over what AI can do, we also come to a fundamental limit on AI capability. Garbage
-in,
-garbage out. Not only are models trained on some fantastic code, they're also trained on terrible code. Then, the more
-AI generated
-code based on these models that makes it into the wild gets more and more convoluted as good and bad are mixed together,
-and then that
-in turn goes in to train other models. While we're seeing a huge increase in the potential of LLMs for coding, I believe
-we'll start
-to see a dropoff as new frontier models come out and benchmarks performed against models trained. You can only recycle
-paper and
-plastic so many times before it's too weak to carry on and you have to destroy it. In my opinion the same can be said of
-LLMs
-that continue to train themselves on content they generated when still weaker.
+in, garbage out. Not only are models trained on some fantastic code, they're also trained on terrible code. Then, the
+more
+AI generated code based on these models that makes it into the wild gets more and more convoluted as good and bad are
+mixed together,
+and then that in turn goes in to train other models. While we're seeing a huge increase in the potential of LLMs for
+coding, I believe
+we'll start to see a dropoff as new frontier models come out and benchmarks performed against models trained. You can
+only recycle
+paper and plastic so many times before it's too weak to carry on and you have to destroy it. In my opinion the same can
+be said of
+LLMs that continue to train themselves on content they generated when still weaker.
 
 I think we're a long ways off from AI code to be production grade, and until that time, purely AI generated code is not
 allowed.
+
+Some AI is used for maintence of the repository itself, but core numru code is not allowed to be totally AI generated.

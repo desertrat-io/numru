@@ -2,9 +2,13 @@
 name = "rengine"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+authors = ["mike@desertrat.io"]
 
 [dependencies]
 blas-src = { version = "0.14.0", features = ["openblas"] }
-ndarray = "0.17.2"
+cargo-show-asm = "0.2.57"
 ndarray-linalg = "0.18.1"
 rayon = "1.11.0"
+
+

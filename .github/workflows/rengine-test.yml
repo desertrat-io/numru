@@ -1,0 +1,48 @@
+name: rengine-test
+
+on:
+  push:
+    paths:
+      - ".github/workflows/rengine-test.yml"
+      - "rengine/**"
+  pull_request:
+    paths:
+      - ".github/workflows/rengine-test.yml"
+      - "rengine/**"
+
+jobs:
+  test:
+    name: rengine test suite, ARM only
+    strategy:
+      matrix:
+        include:
+          - name: MacOS Tahoe Arm
+            runner: macos-26
+          - name: MacOS 15 Arm
+            runner: macos-15
+          - name: Ubuntu 24 Arm
+            runner: ubuntu-24.04-arm64
+
+    runs-on: ${{ matrix.runner }}
+    env:
+      RUSTFLAGS: >-
+        -C target-feature=+neon
+
+    steps:
+
+      - name: Grab a rust toolchain, whatever version is latest in the stable channel. may want to pin this though
+        uses: dtolnay/rust-toolchain@stable
+      - name: Verify intrinsics are available
+        run: |
+          rustc --print cfg | grep -E 'target_arch="aarch64"|target_arch="arm64"'
+          rustc --print cfg | grep -E 'target_feature="neon"'
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+
+      - uses: actions/checkout@v4
+      - name: Run rengine tests
+        run: cargo test -p rengine --locked --all-targets
