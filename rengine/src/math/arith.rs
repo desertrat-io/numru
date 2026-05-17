@@ -16,20 +16,16 @@
 //! non par non neon implementations
 
 use crate::data::array::Array;
-use crate::matrix::ops::{
-    binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3,
-};
-use rayon::prelude::*;
-#[cfg(target_arch = "aarch64")]
-use std::arch::aarch64::{float32x4_t, vaddq_f32, vdivq_f32, vfmaq_f32, vmulq_f32, vsubq_f32};
-use std::arch::aarch64::{vabsq_f32, vnegq_f32, vsqrtq_f32};
 
-#[derive(Clone, Copy)]
-pub enum Mode {
-    Normal,
-    Neon,
-    ParNeon,
-}
+use crate::matrix::ops::{
+    Mode, binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3,
+};
+
+#[cfg(target_arch = "aarch64")]
+use std::arch::aarch64::{
+    float32x4_t, vabsq_f32, vaddq_f32, vdivq_f32, vfmaq_f32, vmulq_f32, vnegq_f32, vsqrtq_f32,
+    vsubq_f32,
+};
 
 /// Single abstraction point of entry
 /// The returned function is preconfigured to represent a fast operational loop based on the op
@@ -244,7 +240,9 @@ fn mul_scalar_32(left: f32, right: f32) -> f32 {
 }
 
 fn div_scalar_32(left: f32, right: f32) -> f32 {
-    assert_ne!(right, 0.0, "Division by zero is undefined");
+    if right == 0.0 {
+        panic!("Division by zero");
+    }
     left / right
 }
 fn add_mul_scalar_32(left: f32, middle: f32, right: f32) -> f32 {
