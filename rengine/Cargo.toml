@@ -5,10 +5,25 @@ edition = "2024"
 license = "MIT"
 authors = ["mike@desertrat.io"]
 
+[features]
+default = ["openblas-system"]
+openblas-system = [
+    "ndarray-linalg/openblas-system",
+    "openblas-src/system",
+    "openblas-src/cblas",
+    "openblas-src/rustls",
+]
+openblas-static = [
+    "ndarray-linalg/openblas-static",
+    "openblas-src/static",
+    "openblas-src/cblas",
+    "openblas-src/rustls",
+]
+
 [dependencies]
-blas-src = { version = "0.14.0", features = ["openblas"] }
 cargo-show-asm = "0.2.57"
-ndarray-linalg = "0.18.1"
+ndarray-linalg = { version = "0.18.1", default-features = false }
+openblas-src = { version = "0.10.16", default-features = false, optional = true }
 rayon = "1.11.0"
 
 
