@@ -1,5 +1,6 @@
 use crate::data::array::Array;
 use crate::matrix::ops::*;
+#[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::{vceqq_f32, vcgtq_f32};
 ///
 /// #Compare operations

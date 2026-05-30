@@ -9,6 +9,8 @@ pub mod data {
 }
 
 pub mod logic {
+    pub mod boolean;
+    mod boolean_test;
     pub mod compare;
     mod compare_test;
 }
