@@ -28,3 +28,28 @@ impl Array {
         self.len
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct BoolArray {
+    data: Vec<bool>,
+    len: usize,
+}
+
+impl BoolArray {
+    pub fn new(data: Vec<bool>) -> Self {
+        let len = data.len();
+        Self { data, len }
+    }
+
+    pub fn slice(&self) -> &[bool] {
+        &self.data
+    }
+
+    pub fn mut_slice(&mut self) -> &mut [bool] {
+        &mut self.data
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}
