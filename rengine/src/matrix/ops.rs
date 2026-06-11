@@ -5,12 +5,16 @@ use std::arch::aarch64::{
     float32x4_t, uint32x4_t, uint8x16_t, vandq_u32, vandq_u8, vcvtq_f32_u32, vdupq_n_u32,
     vdupq_n_u8, vld1q_f32, vld1q_u8, vst1q_f32, vst1q_u8,
 };
+use std::arch::aarch64::{int32x4_t, vld1q_s32};
+use std::ops::Add;
 
 const NUM_FLOAT_LANES_32: usize = 4;
 
 // Rust bools are always one byte and will always be u8
 const BOOL_SIZE: u8 = 0b0000_0001;
 const NUM_BOOL_LANES_8: usize = 16;
+
+const NUM_INT_LANES_32: usize = 4;
 const PAR_CHUNK_SIZE: usize = 4096; // BYTES
 
 /// the argument type is an unsafe function that receives two 32 bit register definitions
@@ -21,6 +25,8 @@ pub type IntrinsicOp2 = unsafe fn(float32x4_t, float32x4_t) -> float32x4_t;
 pub type IntrinsicOp3 = unsafe fn(float32x4_t, float32x4_t, float32x4_t) -> float32x4_t;
 
 pub type IntrinsicInt = unsafe fn(float32x4_t) -> uint32x4_t;
+
+pub type IntrinsicSignedInt = unsafe fn(int32x4_t) -> i32;
 pub type IntrinsicInt2 = unsafe fn(float32x4_t, float32x4_t) -> uint32x4_t;
 
 pub type IntrinsicBool = unsafe fn(uint8x16_t) -> uint8x16_t;
@@ -30,6 +36,8 @@ pub type IntrinsicBool2 = unsafe fn(uint8x16_t, uint8x16_t) -> uint8x16_t;
 pub type ScalarOp = fn(f32) -> f32;
 pub type ScalarOp2 = fn(f32, f32) -> f32;
 pub type ScalarOp3 = fn(f32, f32, f32) -> f32;
+
+pub type SignedIntScalarVecOp = fn(&[i32]) -> i32;
 
 pub type BooleanScalarOp = fn(bool) -> bool;
 
@@ -43,6 +51,8 @@ pub type BooleanVecOp = fn(&[bool], &mut [bool]);
 
 pub type BooleanVecOp2 = fn(&[bool], &[bool], &mut [bool]);
 
+pub type SignedIntVecOp = fn(&[i32]) -> i32;
+
 #[derive(Clone, Copy)]
 pub enum Mode {
     Normal,
@@ -50,6 +60,9 @@ pub enum Mode {
     ParNeon,
 }
 
+pub fn signed_int_op_1(left: &[i32], result: &mut i32, op: SignedIntScalarVecOp) {
+    *result = op(&left);
+}
 pub fn binary_op_1(left: &[f32], result: &mut [f32], op: ScalarOp) {
     assert_eq!(left.len(), result.len());
     for i in 0..left.len() {
@@ -117,6 +130,37 @@ pub fn neon_1(left: &[f32], result: &mut [f32], intrinsic_op: IntrinsicOp, scala
     for i in (mem_chunks * NUM_FLOAT_LANES_32)..len {
         result[i] = scalar_op(left[i]);
     }
+}
+
+// TODO: Evaluate true correctness, used a suggestion from codex
+// The intrinsic uses intrinsic types (duh) that are not easily castable
+// to i32, which is what we need, but we need to lay this vector out in the
+// vector registers, and handle this like a normal NEON call that we've implemented
+// elsewhere.
+pub fn signed_int_neon_1(
+    left: &[i32],
+    intrinsic_op: IntrinsicSignedInt,
+    signed_int_scalar_op: SignedIntScalarVecOp,
+) -> i32 {
+    let len = left.len();
+    let mut result = 0;
+    let mem_chunks = len / NUM_INT_LANES_32;
+    unsafe {
+        for i in 0..mem_chunks {
+            let idx = i * NUM_INT_LANES_32;
+            let v_left = vld1q_s32(left.as_ptr().add(idx));
+            result += intrinsic_op(v_left);
+        }
+    }
+    // why so weird?
+    // because condensing a vector into a single number is a reductive operation
+    // and so any remainder in memory has to be handled by directly accessing the last elements
+    // of the vector since they do not fit neatly into the vector registers
+    if (mem_chunks * NUM_INT_LANES_32) < len {
+        result += signed_int_scalar_op(&left[mem_chunks * NUM_INT_LANES_32..]);
+    }
+
+    result
 }
 
 // bools in rust are 8bits, thus u8 intrinsics
@@ -315,6 +359,10 @@ pub fn par_2(left: &[f32], right: &[f32], result: &mut [f32], op: VecOp2) {
         .for_each(|((result_chunk, left_chunk), right_chunk)| {
             op(left_chunk, right_chunk, result_chunk);
         });
+}
+
+pub fn signed_int_par_1(vector: &[i32], op: SignedIntVecOp) -> i32 {
+    vector.par_chunks(PAR_CHUNK_SIZE).map(op).sum()
 }
 
 // TODO: literally just the same as f32 neon par but with bools

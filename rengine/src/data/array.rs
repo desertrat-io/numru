@@ -53,3 +53,28 @@ impl BoolArray {
         self.len
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct IntArray {
+    data: Vec<i32>,
+    len: usize,
+}
+
+impl IntArray {
+    pub fn new(data: Vec<i32>) -> Self {
+        let len = data.len();
+        Self { data, len }
+    }
+
+    pub fn slice(&self) -> &[i32] {
+        &self.data
+    }
+
+    pub fn mut_slice(&mut self) -> &mut [i32] {
+        &mut self.data
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}

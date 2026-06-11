@@ -1,6 +1,8 @@
 pub mod math {
     pub mod arith;
     mod arith_test;
+    pub mod reductive_arith;
+    mod reductive_arith_test;
     pub mod trig;
 }
 
