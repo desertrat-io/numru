@@ -18,13 +18,12 @@
 use crate::data::array::Array;
 
 use crate::matrix::ops::{
-    Mode, binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3,
+    binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3, Mode,
 };
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::{
-    float32x4_t, vabsq_f32, vaddq_f32, vdivq_f32, vfmaq_f32, vmulq_f32, vnegq_f32, vsqrtq_f32,
-    vsubq_f32,
+    vabsq_f32, vaddq_f32, vdivq_f32, vfmaq_f32, vmulq_f32, vnegq_f32, vsqrtq_f32, vsubq_f32,
 };
 
 /// Single abstraction point of entry
@@ -261,27 +260,11 @@ fn sqrt_scalar_32(value: f32) -> f32 {
     value.sqrt()
 }
 
-fn pow_scalar_32(value: f32, exp: f32) -> f32 {
-    value.powf(exp)
-}
-
-#[cfg(target_arch = "aarch64")]
-// TODO:
-fn arm_svlogb_f32(value: float32x4_t) -> float32x4_t {
-    // values are 128 bit in an ARM vector register of the same size
-    // however those bits represent 4 32 bit floats
-
-    value
-}
-
 fn exp_scalar_32(value: f32) -> f32 {
     value.exp()
 }
 
-// the intrinsic only operates on base 2, so run the conversion formula
-fn log2_scalar_32(value: f32) -> f32 {
-    value.log(10.0) / value.log(2.0)
-}
+//TODO: implement log scalar
 
 // we need to be able to pass a reference to this operation around, otherwise
 // we could just call this inline
