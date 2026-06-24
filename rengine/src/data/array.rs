@@ -55,12 +55,12 @@ impl BoolArray {
 }
 
 #[derive(Clone, Debug)]
-pub struct IntArray {
+pub struct SignedIntArray {
     data: Vec<i32>,
     len: usize,
 }
 
-impl IntArray {
+impl SignedIntArray {
     pub fn new(data: Vec<i32>) -> Self {
         let len = data.len();
         Self { data, len }

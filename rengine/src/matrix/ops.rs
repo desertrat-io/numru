@@ -6,7 +6,6 @@ use std::arch::aarch64::{
     vdupq_n_u8, vld1q_f32, vld1q_u8, vst1q_f32, vst1q_u8,
 };
 use std::arch::aarch64::{int32x4_t, vld1q_s32};
-use std::ops::Add;
 
 const NUM_FLOAT_LANES_32: usize = 4;
 
@@ -37,7 +36,9 @@ pub type ScalarOp = fn(f32) -> f32;
 pub type ScalarOp2 = fn(f32, f32) -> f32;
 pub type ScalarOp3 = fn(f32, f32, f32) -> f32;
 
-pub type SignedIntScalarVecOp = fn(&[i32]) -> i32;
+pub type SignedIntScalarVecOp = fn(&[i32], Option<&[i32]>) -> i32;
+
+pub type SignedIntReductionOp = fn(i32, i32) -> i32;
 
 pub type BooleanScalarOp = fn(bool) -> bool;
 
@@ -60,9 +61,6 @@ pub enum Mode {
     ParNeon,
 }
 
-pub fn signed_int_op_1(left: &[i32], result: &mut i32, op: SignedIntScalarVecOp) {
-    *result = op(&left);
-}
 pub fn binary_op_1(left: &[f32], result: &mut [f32], op: ScalarOp) {
     assert_eq!(left.len(), result.len());
     for i in 0..left.len() {
@@ -133,6 +131,8 @@ pub fn neon_1(left: &[f32], result: &mut [f32], intrinsic_op: IntrinsicOp, scala
 }
 
 // TODO: Evaluate true correctness, used a suggestion from codex
+// UPDATE: Codex suggestion was bad. Tweaked to use optionals instead
+// since not all reductive operations have exactly the same purpose and methodology
 // The intrinsic uses intrinsic types (duh) that are not easily castable
 // to i32, which is what we need, but we need to lay this vector out in the
 // vector registers, and handle this like a normal NEON call that we've implemented
@@ -141,15 +141,22 @@ pub fn signed_int_neon_1(
     left: &[i32],
     intrinsic_op: IntrinsicSignedInt,
     signed_int_scalar_op: SignedIntScalarVecOp,
+    reduction_op: SignedIntReductionOp,
 ) -> i32 {
     let len = left.len();
-    let mut result = 0;
+    let mut result: Option<i32> = None;
     let mem_chunks = len / NUM_INT_LANES_32;
     unsafe {
         for i in 0..mem_chunks {
             let idx = i * NUM_INT_LANES_32;
             let v_left = vld1q_s32(left.as_ptr().add(idx));
-            result += intrinsic_op(v_left);
+            let intrinsic_result = intrinsic_op(v_left);
+            // the reduction_op in this case acts as an accumualtor to keep track of ongoing results
+            // TODO: there may be an allocation  bottleneck here, revisit.
+            result = Some(match result {
+                Some(existing_result) => reduction_op(existing_result, intrinsic_result),
+                None => intrinsic_result,
+            });
         }
     }
     // why so weird?
@@ -157,10 +164,24 @@ pub fn signed_int_neon_1(
     // and so any remainder in memory has to be handled by directly accessing the last elements
     // of the vector since they do not fit neatly into the vector registers
     if (mem_chunks * NUM_INT_LANES_32) < len {
-        result += signed_int_scalar_op(&left[mem_chunks * NUM_INT_LANES_32..]);
+        let remainder = &left[(mem_chunks * NUM_INT_LANES_32)..];
+        let existing = match result.as_ref() {
+            Some(existing_result) => Some(std::slice::from_ref(existing_result)),
+            None => None,
+        };
+        // using the scalar op in this loop we can keep checking each value, left and right
+        // using the scalar operation that should be the same for all reductive operations
+        result = Some(signed_int_scalar_op(
+            remainder,
+            // result will keep mutating, and we need to be very careful and ensure
+            // that we're only using references to result instead of totally allocating new
+            // space for the result.
+            existing,
+        ));
     }
 
-    result
+    // then if we are absolutely sure that we have no remainder, we can just return the result
+    result.unwrap_or_else(|| signed_int_scalar_op(left, None))
 }
 
 // bools in rust are 8bits, thus u8 intrinsics
