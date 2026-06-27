@@ -68,6 +68,17 @@ pub fn max(vector: SignedIntArray, mode: Mode) -> i32 {
     result
 }
 
+pub fn mean(vector: SignedIntArray, mode: Mode) -> i32 {
+    // this is actually much simpler than before because we can just reuse sum and divide
+    // at the end of processing
+    if vector.len() == 0 {
+        panic!("Divide by zero risk: vector length is 0")
+    }
+    // vector is consumed later on, set the length aside here
+    let len = vector.len() as i32;
+    sum(vector, mode) / len
+}
+
 fn reductive_sum_scalar_32(vector: &[i32], existing: Option<&[i32]>) -> i32 {
     vector.iter().sum::<i32>() + existing.unwrap_or_default().iter().sum::<i32>()
 }
