@@ -2,10 +2,9 @@ use rayon::prelude::*;
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::{
-    float32x4_t, uint32x4_t, uint8x16_t, vandq_u32, vandq_u8, vcvtq_f32_u32, vdupq_n_u32,
-    vdupq_n_u8, vld1q_f32, vld1q_u8, vst1q_f32, vst1q_u8,
+    float32x4_t, int32x4_t, uint32x4_t, uint8x16_t, vandq_u32, vandq_u8, vcvtq_f32_u32, vdupq_n_u32,
+    vdupq_n_u8, vld1q_f32, vld1q_s32, vld1q_u8, vst1q_f32, vst1q_u8,
 };
-use std::arch::aarch64::{int32x4_t, vld1q_s32};
 
 const NUM_FLOAT_LANES_32: usize = 4;
 
@@ -14,45 +13,43 @@ const BOOL_SIZE: u8 = 0b0000_0001;
 const NUM_BOOL_LANES_8: usize = 16;
 
 const NUM_INT_LANES_32: usize = 4;
-const PAR_CHUNK_SIZE: usize = 4096; // BYTES
+pub(crate) const PAR_CHUNK_SIZE: usize = 4096; // number of elements, not bytes even though it looks that way
 
 /// the argument type is an unsafe function that receives two 32 bit register definitions
 /// and have two operands each representing a vector to be loaded
 /// into the specific vector registers
-pub type IntrinsicOp = unsafe fn(float32x4_t) -> float32x4_t;
-pub type IntrinsicOp2 = unsafe fn(float32x4_t, float32x4_t) -> float32x4_t;
-pub type IntrinsicOp3 = unsafe fn(float32x4_t, float32x4_t, float32x4_t) -> float32x4_t;
+pub(crate) type IntrinsicOp = unsafe fn(float32x4_t) -> float32x4_t;
+pub(crate) type IntrinsicOp2 = unsafe fn(float32x4_t, float32x4_t) -> float32x4_t;
+pub(crate) type IntrinsicOp3 = unsafe fn(float32x4_t, float32x4_t, float32x4_t) -> float32x4_t;
 
-pub type IntrinsicInt = unsafe fn(float32x4_t) -> uint32x4_t;
+pub(crate) type IntrinsicSignedInt = unsafe fn(int32x4_t) -> i32;
+pub(crate) type IntrinsicInt2 = unsafe fn(float32x4_t, float32x4_t) -> uint32x4_t;
 
-pub type IntrinsicSignedInt = unsafe fn(int32x4_t) -> i32;
-pub type IntrinsicInt2 = unsafe fn(float32x4_t, float32x4_t) -> uint32x4_t;
+pub(crate) type IntrinsicBool = unsafe fn(uint8x16_t) -> uint8x16_t;
 
-pub type IntrinsicBool = unsafe fn(uint8x16_t) -> uint8x16_t;
+pub(crate) type IntrinsicBool2 = unsafe fn(uint8x16_t, uint8x16_t) -> uint8x16_t;
 
-pub type IntrinsicBool2 = unsafe fn(uint8x16_t, uint8x16_t) -> uint8x16_t;
+pub(crate) type ScalarOp = fn(f32) -> f32;
+pub(crate) type ScalarOp2 = fn(f32, f32) -> f32;
+pub(crate) type ScalarOp3 = fn(f32, f32, f32) -> f32;
 
-pub type ScalarOp = fn(f32) -> f32;
-pub type ScalarOp2 = fn(f32, f32) -> f32;
-pub type ScalarOp3 = fn(f32, f32, f32) -> f32;
+pub(crate) type SignedIntScalarVecOp = fn(&[i32], Option<&[i32]>) -> i32;
 
-pub type SignedIntScalarVecOp = fn(&[i32], Option<&[i32]>) -> i32;
+pub(crate) type SignedIntReductionOp = fn(i32, i32) -> i32;
 
-pub type SignedIntReductionOp = fn(i32, i32) -> i32;
+pub(crate) type BooleanScalarOp = fn(bool) -> bool;
 
-pub type BooleanScalarOp = fn(bool) -> bool;
+pub(crate) type BooleanScalarOp2 = fn(bool, bool) -> bool;
 
-pub type BooleanScalarOp2 = fn(bool, bool) -> bool;
+pub(crate) type VecOp = fn(&[f32], &mut [f32]);
+pub(crate) type VecOp2 = fn(&[f32], &[f32], &mut [f32]);
+pub(crate) type VecOp3 = fn(&[f32], &[f32], &[f32], &mut [f32]);
 
-pub type VecOp = fn(&[f32], &mut [f32]);
-pub type VecOp2 = fn(&[f32], &[f32], &mut [f32]);
-pub type VecOp3 = fn(&[f32], &[f32], &[f32], &mut [f32]);
+pub(crate) type BooleanVecOp = fn(&[bool], &mut [bool]);
 
-pub type BooleanVecOp = fn(&[bool], &mut [bool]);
+pub(crate) type BooleanVecOp2 = fn(&[bool], &[bool], &mut [bool]);
 
-pub type BooleanVecOp2 = fn(&[bool], &[bool], &mut [bool]);
-
-pub type SignedIntVecOp = fn(&[i32]) -> i32;
+pub(crate) type SignedIntVecOp = fn(&[i32]) -> i32;
 
 #[derive(Clone, Copy)]
 pub enum Mode {
@@ -61,14 +58,14 @@ pub enum Mode {
     ParNeon,
 }
 
-pub fn binary_op_1(left: &[f32], result: &mut [f32], op: ScalarOp) {
+pub(crate) fn binary_op_1(left: &[f32], result: &mut [f32], op: ScalarOp) {
     assert_eq!(left.len(), result.len());
     for i in 0..left.len() {
         result[i] = op(left[i]);
     }
 }
 
-pub fn binary_op_2(left: &[f32], right: &[f32], result: &mut [f32], op: ScalarOp2) {
+pub(crate) fn binary_op_2(left: &[f32], right: &[f32], result: &mut [f32], op: ScalarOp2) {
     assert_eq!(left.len(), right.len());
     assert_eq!(left.len(), result.len());
     for i in 0..left.len() {
@@ -76,7 +73,13 @@ pub fn binary_op_2(left: &[f32], right: &[f32], result: &mut [f32], op: ScalarOp
     }
 }
 
-pub fn binary_op_3(left: &[f32], middle: &[f32], right: &[f32], result: &mut [f32], op: ScalarOp3) {
+pub(crate) fn binary_op_3(
+    left: &[f32],
+    middle: &[f32],
+    right: &[f32],
+    result: &mut [f32],
+    op: ScalarOp3,
+) {
     assert_eq!(left.len(), middle.len());
     assert_eq!(left.len(), right.len());
     assert_eq!(left.len(), result.len());
@@ -85,14 +88,14 @@ pub fn binary_op_3(left: &[f32], middle: &[f32], right: &[f32], result: &mut [f3
     }
 }
 
-pub fn boolean_binary_op_1(left: &[bool], result: &mut [bool], op: BooleanScalarOp) {
+pub(crate) fn boolean_binary_op_1(left: &[bool], result: &mut [bool], op: BooleanScalarOp) {
     assert_eq!(left.len(), result.len());
     for i in 0..left.len() {
         result[i] = op(left[i]);
     }
 }
 
-pub fn boolean_binary_op_2(
+pub(crate) fn boolean_binary_op_2(
     left: &[bool],
     right: &[bool],
     result: &mut [bool],
@@ -111,7 +114,12 @@ pub fn boolean_binary_op_2(
 /// when dealing with a vector. this is abstracted to allow any intrinsic that operates on vectors
 /// the vector registers used are always the same, and all rules regarding size are always the same
 /// registers are managed by the CPU
-pub fn neon_1(left: &[f32], result: &mut [f32], intrinsic_op: IntrinsicOp, scalar_op: ScalarOp) {
+pub(crate) fn neon_1(
+    left: &[f32],
+    result: &mut [f32],
+    intrinsic_op: IntrinsicOp,
+    scalar_op: ScalarOp,
+) {
     assert_eq!(left.len(), result.len());
     let len = left.len();
     let mem_chunks = len / NUM_FLOAT_LANES_32;
@@ -137,7 +145,7 @@ pub fn neon_1(left: &[f32], result: &mut [f32], intrinsic_op: IntrinsicOp, scala
 // to i32, which is what we need, but we need to lay this vector out in the
 // vector registers, and handle this like a normal NEON call that we've implemented
 // elsewhere.
-pub fn signed_int_neon_1(
+pub(crate) fn signed_int_neon_1(
     left: &[i32],
     intrinsic_op: IntrinsicSignedInt,
     signed_int_scalar_op: SignedIntScalarVecOp,
@@ -187,7 +195,7 @@ pub fn signed_int_neon_1(
 // bools in rust are 8bits, thus u8 intrinsics
 // also, rust bools only use the lowest order bit, thus any boolean in rust
 // in binary is 0b00000001 true or 0b00000000 false
-pub fn boolean_neon_1(
+pub(crate) fn boolean_neon_1(
     left: &[bool],
     result: &mut [bool],
     intrinsic_op: IntrinsicBool,
@@ -223,7 +231,7 @@ pub fn boolean_neon_1(
 // to keep implementations clean, we use the uint versions of particular vector functions
 // instead of f32 in cases where a boolean is being used that cannot be easily described as a
 // floating point number
-pub fn neon_bool_2(
+pub(crate) fn neon_bool_2(
     left: &[f32],
     right: &[f32],
     result: &mut [f32],
@@ -259,7 +267,7 @@ pub fn neon_bool_2(
         result[i] = scalar_op(left[i], right[i]);
     }
 }
-pub fn neon_2(
+pub(crate) fn neon_2(
     left: &[f32],
     right: &[f32],
     result: &mut [f32],
@@ -291,7 +299,7 @@ pub fn neon_2(
     }
 }
 
-pub fn boolean_neon_2(
+pub(crate) fn boolean_neon_2(
     left: &[bool],
     right: &[bool],
     result: &mut [bool],
@@ -327,7 +335,7 @@ pub fn boolean_neon_2(
     }
 }
 
-pub fn neon_3(
+pub(crate) fn neon_3(
     left: &[f32],
     middle: &[f32],
     right: &[f32],
@@ -361,7 +369,7 @@ pub fn neon_3(
     }
 }
 
-pub fn par_1(left: &[f32], result: &mut [f32], op: VecOp) {
+pub(crate) fn par_1(left: &[f32], result: &mut [f32], op: VecOp) {
     assert_eq!(left.len(), result.len());
     result
         .par_chunks_mut(PAR_CHUNK_SIZE)
@@ -370,7 +378,7 @@ pub fn par_1(left: &[f32], result: &mut [f32], op: VecOp) {
             op(left_chunk, result_chunk);
         });
 }
-pub fn par_2(left: &[f32], right: &[f32], result: &mut [f32], op: VecOp2) {
+pub(crate) fn par_2(left: &[f32], right: &[f32], result: &mut [f32], op: VecOp2) {
     assert_eq!(left.len(), right.len());
     assert_eq!(left.len(), result.len());
     result
@@ -382,14 +390,22 @@ pub fn par_2(left: &[f32], right: &[f32], result: &mut [f32], op: VecOp2) {
         });
 }
 
-pub fn signed_int_par_1(vector: &[i32], op: SignedIntVecOp) -> i32 {
-    vector.par_chunks(PAR_CHUNK_SIZE).map(op).sum()
+pub(crate) fn signed_int_par_1(
+    vector: &[i32],
+    op: SignedIntVecOp,
+    base_val: i32,
+    signed_int_reduction_op: SignedIntReductionOp,
+) -> i32 {
+    vector
+        .par_chunks(PAR_CHUNK_SIZE)
+        .map(op)
+        .reduce(|| base_val, signed_int_reduction_op)
 }
 
 // TODO: literally just the same as f32 neon par but with bools
 // fix this ASAP!!!!!
 // quick hack, igore
-pub fn boolean_par_1(left: &[bool], result: &mut [bool], op: BooleanVecOp) {
+pub(crate) fn boolean_par_1(left: &[bool], result: &mut [bool], op: BooleanVecOp) {
     assert_eq!(left.len(), result.len());
     result
         .par_chunks_mut(PAR_CHUNK_SIZE)
@@ -402,7 +418,7 @@ pub fn boolean_par_1(left: &[bool], result: &mut [bool], op: BooleanVecOp) {
 // TODO: literally just the same as f32 neon par but with bools
 // fix this ASAP!!!!!
 // quick hack, igore
-pub fn boolean_par_2(left: &[bool], right: &[bool], result: &mut [bool], op: BooleanVecOp2) {
+pub(crate) fn boolean_par_2(left: &[bool], right: &[bool], result: &mut [bool], op: BooleanVecOp2) {
     assert_eq!(left.len(), result.len());
     assert_eq!(left.len(), right.len());
     result
@@ -413,7 +429,7 @@ pub fn boolean_par_2(left: &[bool], right: &[bool], result: &mut [bool], op: Boo
             op(left_chunk, right_chunk, result_chunk);
         });
 }
-pub fn par_3(
+pub(crate) fn par_3(
     left: &[f32],
     middle: &[f32],
     right: &[f32],

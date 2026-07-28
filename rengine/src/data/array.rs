@@ -1,3 +1,6 @@
+// TODO: Update these so it's just a generic vector, no need to hardcode the type. This is for
+// todo list organization
+
 #[derive(Clone, Debug)]
 pub struct Array {
     data: Vec<f32>,
