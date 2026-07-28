@@ -1,8 +1,10 @@
 pub mod math {
     pub mod arith;
     mod arith_test;
-    pub mod reductive_arith;
-    mod reductive_arith_test;
+    pub mod reductive_arg_i32;
+    mod reductive_arg_i32_test;
+    pub mod reductive_arith_i32;
+    mod reductive_arith_i32_test;
     pub mod trig;
 }
 
