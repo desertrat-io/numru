@@ -1,12 +1,12 @@
 use crate::data::array::SignedIntArray;
 
-use crate::matrix::ops::{signed_int_neon_1, signed_int_par_1, Mode};
+use crate::matrix::ops::{Mode, signed_int_neon_1, signed_int_par_1};
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
-/// Trait for reduction operations on signed integer arrays that perform selective reductions (track multiple variables)
-
-pub fn sum(vector: SignedIntArray, mode: Mode) -> i32 {
+// so the sum is a useful function, but we don't want to keep cloning vectors all over, so it's cheaper
+// to just borrow
+pub fn sum(vector: &SignedIntArray, mode: Mode) -> i32 {
     let result: i32;
     match mode {
         Mode::Normal => result = reductive_sum_scalar_32(vector.slice(), None),
@@ -93,7 +93,7 @@ pub fn mean(vector: SignedIntArray, mode: Mode) -> i32 {
     // vector is consumed later on, set the length aside here
     // lengths beyond 32 bit pointers are not supported by this approach
     let len = vector.len() as i32;
-    sum(vector, mode) / len
+    sum(&vector, mode) / len
 }
 fn reductive_sum_scalar_32(vector: &[i32], existing: Option<&[i32]>) -> i32 {
     vector.iter().sum::<i32>() + existing.unwrap_or_default().iter().sum::<i32>()
