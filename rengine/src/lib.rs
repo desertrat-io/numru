@@ -6,6 +6,9 @@ pub mod math {
     pub mod reductive_arith_i32;
     mod reductive_arith_i32_test;
     pub mod trig;
+    pub mod stats;
+    pub mod stats_i32;
+    mod stats_i32_test;
 }
 
 pub mod data {

@@ -6,13 +6,13 @@ use std::arch::aarch64::{
     vdupq_n_u8, vld1q_f32, vld1q_s32, vld1q_u8, vst1q_f32, vst1q_u8,
 };
 
-const NUM_FLOAT_LANES_32: usize = 4;
+pub(crate) const NUM_FLOAT_LANES_32: usize = 4;
 
 // Rust bools are always one byte and will always be u8
 const BOOL_SIZE: u8 = 0b0000_0001;
 const NUM_BOOL_LANES_8: usize = 16;
 
-const NUM_INT_LANES_32: usize = 4;
+pub(crate) const NUM_INT_LANES_32: usize = 4;
 pub(crate) const PAR_CHUNK_SIZE: usize = 4096; // number of elements, not bytes even though it looks that way
 
 /// the argument type is an unsafe function that receives two 32 bit register definitions

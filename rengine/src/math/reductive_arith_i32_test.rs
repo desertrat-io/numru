@@ -40,76 +40,76 @@ mod tests {
     #[test]
     fn reductive_scalar_sum_32() {
         let vector = signed_int_vector(THREE_ASC);
-        let result = sum(vector, Mode::Normal);
+        let result = sum(&vector, Mode::Normal);
         assert_eq!(result, 6);
         let vector = signed_int_vector(EMPTY);
-        let result = sum(vector, Mode::Normal);
+        let result = sum(&vector, Mode::Normal);
         assert_eq!(result, 0);
         let vector = signed_int_vector(FOUR_NEG);
-        let result = sum(vector, Mode::Normal);
+        let result = sum(&vector, Mode::Normal);
         assert_eq!(result, -10);
     }
 
     #[test]
     fn signed_int_neon_1_sums_full_vector() {
         let vector = signed_int_vector(FOUR_ASC);
-        let result = sum(vector, Mode::Neon);
+        let result = sum(&vector, Mode::Neon);
         assert_eq!(result, 10);
     }
 
     #[test]
     fn signed_int_neon_1_sums_full_vector_with_negative() {
         let vector = signed_int_vector(FOUR_NEG);
-        let result = sum(vector, Mode::Neon);
+        let result = sum(&vector, Mode::Neon);
         assert_eq!(result, -10);
     }
 
     #[test]
     fn signed_int_neon_1_sums_remainder() {
         let vector = signed_int_vector(FIVE_ASC);
-        let result = sum(vector, Mode::Neon);
+        let result = sum(&vector, Mode::Neon);
         assert_eq!(result, 15);
     }
 
     #[test]
     fn signed_int_par_1_sums_full_vector() {
         let vector = signed_int_vector(FOUR_ASC);
-        let result = sum(vector, Mode::ParNeon);
+        let result = sum(&vector, Mode::ParNeon);
         assert_eq!(result, 10);
     }
 
     #[test]
     fn signed_int_par_1_sums_empty_vector() {
         let vector = signed_int_vector(EMPTY);
-        let result = sum(vector, Mode::ParNeon);
+        let result = sum(&vector, Mode::ParNeon);
         assert_eq!(result, 0);
     }
 
     #[test]
     fn signed_int_par_1_sums_remainder() {
         let vector = signed_int_vector(SEVEN_ASC);
-        let result = sum(vector, Mode::ParNeon);
+        let result = sum(&vector, Mode::ParNeon);
         assert_eq!(result, 28);
     }
 
     #[test]
     fn signed_int_par_1_sums_exact_parallel_chunk() {
         let vector = range_vector(PAR_CHUNK_SIZE);
-        let result = sum(vector, Mode::ParNeon);
+        let result = sum(&vector, Mode::ParNeon);
         assert_eq!(result, (0..PAR_CHUNK_SIZE as i32).sum::<i32>());
     }
 
     #[test]
     fn signed_int_par_1_sums_parallel_chunk_with_remainder() {
         let vector = range_vector(PAR_CHUNK_SIZE + 1);
-        let result = sum(vector, Mode::ParNeon);
+        let result = sum(&vector, Mode::ParNeon);
         assert_eq!(result, (0..=PAR_CHUNK_SIZE as i32).sum::<i32>());
     }
 
     #[test]
     fn signed_int_par_1_sums_multiple_parallel_chunks() {
         let vector = range_vector(PAR_CHUNK_SIZE * 2 + 3);
-        let result = sum(vector, Mode::ParNeon);
+        let result = sum(&vector, Mode::ParNeon);
         assert_eq!(result, (0..(PAR_CHUNK_SIZE * 2 + 3) as i32).sum::<i32>());
     }
 
