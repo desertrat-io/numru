@@ -84,4 +84,14 @@ Key points:
 
 The goal is a cleaner, faster, more maintainable foundation for numerical computing.
 
+# Acknowledgements
+
+The argmin and argmax NEON implementations are inspired by and based on the work of [jvdd](https://github.com/jvdd) and
+his fantastic
+Rust based version of the same that you can find
+here: [argminmax](https://github.com/jvdd/argminmax). If you need a multi architecture implementation of just the min
+max vector functions, this is the way
+to go without having to build all of the numru engine to get access to them. The crate is
+available [here](https://crates.io/crates/argminmax).
+
 ### And yes, at least part of the reason is because I was bored on a Friday night. Yes I know this will take a very long time
