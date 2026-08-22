@@ -6,7 +6,7 @@ This repository permits limited use of coding agents for experimental assistance
 
 Agents may help with exploration, scaffolding, drafts, investigation, note-taking, and other non-core tasks. Agents are
 not authorized to contribute core project code, define project direction, or submit changes for inclusion through pull
-requests.
+requests. Agents are authorized to write unit tests into any project layer.
 
 All agent output must be treated as untrusted until reviewed by a human maintainer.
 
@@ -112,8 +112,7 @@ When making human-authored changes, follow these priorities:
 - ensure optimization after any and all changes are made and logic correctness is ensured
 
 NumPy may be an inspiration, but this project does not need to copy every historical decision or compatibility burden.
-Structures
-from NumPy should never be repeated, only interpreted for a human to act on in the decision process.
+Structures from NumPy should never be repeated, only interpreted for a human to act on in the decision process.
 
 ## Agent Policy
 
