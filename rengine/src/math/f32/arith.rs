@@ -15,10 +15,10 @@
 //! and are only available in nightly. for now we will not be using anything and just use slower
 //! non par non neon implementations
 
-use crate::data::array::Array;
+use crate::data::array::SignedF32Array;
 
-use crate::matrix::ops::{
-    binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3, Mode,
+use crate::matrix::ops::{Mode,
+                         binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3,
 };
 
 #[cfg(target_arch = "aarch64")]
@@ -40,8 +40,8 @@ use std::arch::aarch64::{
 // TODO: Just handle 32 bit cases for now
 
 /// unary (1 vector) operations
-pub fn abs(vector: Array, mode: Mode) -> Array {
-    let mut result = Array::zero_padded(vector.len());
+pub fn abs(vector: SignedF32Array, mode: Mode) -> SignedF32Array {
+    let mut result = SignedF32Array::default_padded(vector.len());
     match mode {
         Mode::Normal => binary_op_1(vector.slice(), result.mut_slice(), abs_scalar_32),
         Mode::Neon => neon_1(vector.slice(), result.mut_slice(), vabsq_f32, abs_scalar_32),
@@ -53,8 +53,8 @@ pub fn abs(vector: Array, mode: Mode) -> Array {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn log(vector: Array, mode: Mode) -> Array {
-    let mut result = Array::zero_padded(vector.len());
+pub fn log(vector: SignedF32Array, mode: Mode) -> SignedF32Array {
+    let mut result = SignedF32Array::default_padded(vector.len());
     match mode {
         Mode::Normal => binary_op_1(vector.slice(), result.mut_slice(), log10_scalar_32),
         _ => panic!("log only supported in scalar mode for now"),
@@ -63,8 +63,8 @@ pub fn log(vector: Array, mode: Mode) -> Array {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn exp(vector: Array, mode: Mode) -> Array {
-    let mut result = Array::zero_padded(vector.len());
+pub fn exp(vector: SignedF32Array, mode: Mode) -> SignedF32Array {
+    let mut result = SignedF32Array::default_padded(vector.len());
     match mode {
         Mode::Normal => binary_op_1(vector.slice(), result.mut_slice(), exp_scalar_32),
         _ => panic!("exp only supported in scalar mode for now"),
@@ -72,8 +72,8 @@ pub fn exp(vector: Array, mode: Mode) -> Array {
     result
 }
 
-pub fn neg(vector: Array, mode: Mode) -> Array {
-    let mut result = Array::zero_padded(vector.len());
+pub fn neg(vector: SignedF32Array, mode: Mode) -> SignedF32Array {
+    let mut result = SignedF32Array::default_padded(vector.len());
     match mode {
         Mode::Normal => binary_op_1(vector.slice(), result.mut_slice(), neg_scalar_32),
         Mode::Neon => neon_1(vector.slice(), result.mut_slice(), vnegq_f32, neg_scalar_32),
@@ -84,8 +84,8 @@ pub fn neg(vector: Array, mode: Mode) -> Array {
     result
 }
 
-pub fn sqrt(vector: Array, mode: Mode) -> Array {
-    let mut result = Array::zero_padded(vector.len());
+pub fn sqrt(vector: SignedF32Array, mode: Mode) -> SignedF32Array {
+    let mut result = SignedF32Array::default_padded(vector.len());
     match mode {
         Mode::Normal => binary_op_1(vector.slice(), result.mut_slice(), sqrt_scalar_32),
         Mode::Neon => neon_1(
@@ -103,7 +103,7 @@ pub fn sqrt(vector: Array, mode: Mode) -> Array {
 
 /// binary (2 vector) operations
 #[cfg(target_arch = "aarch64")]
-pub fn add(left: Array, right: Array, mode: Mode) -> Array {
+pub fn add(left: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
     assert_eq!(left.len(), right.len());
     let (left_slice, right_slice, mut result) = as_flat_slices(&left, &right);
     let result_slice = result.mut_slice();
@@ -125,7 +125,7 @@ pub fn add(left: Array, right: Array, mode: Mode) -> Array {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn sub(left: Array, right: Array, mode: Mode) -> Array {
+pub fn sub(left: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
     assert_eq!(left.len(), right.len());
     let (left_slice, right_slice, mut result) = as_flat_slices(&left, &right);
     let result_slice = result.mut_slice();
@@ -146,7 +146,7 @@ pub fn sub(left: Array, right: Array, mode: Mode) -> Array {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn mul(left: Array, right: Array, mode: Mode) -> Array {
+pub fn mul(left: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
     assert_eq!(left.len(), right.len());
     let (left_slice, right_slice, mut result) = as_flat_slices(&left, &right);
     let result_slice = result.mut_slice();
@@ -167,7 +167,7 @@ pub fn mul(left: Array, right: Array, mode: Mode) -> Array {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn div(left: Array, right: Array, mode: Mode) -> Array {
+pub fn div(left: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
     assert_eq!(left.len(), right.len());
     let (left_slice, right_slice, mut result) = as_flat_slices(&left, &right);
     let result_slice = result.mut_slice();
@@ -189,13 +189,13 @@ pub fn div(left: Array, right: Array, mode: Mode) -> Array {
 
 /// Fused operations
 #[cfg(target_arch = "aarch64")]
-pub fn add_mul(left: Array, middle: Array, right: Array, mode: Mode) -> Array {
+pub fn add_mul(left: SignedF32Array, middle: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
     assert_eq!(left.len(), middle.len());
     assert_eq!(left.len(), right.len());
     let left_slice = left.slice();
     let middle_slice = middle.slice();
     let right_slice = right.slice();
-    let mut result = Array::zero_padded(left.len());
+    let mut result = SignedF32Array::default_padded(left.len());
     let result_slice = result.mut_slice();
     match mode {
         Mode::Normal => binary_op_3(
@@ -274,6 +274,6 @@ fn log10_scalar_32(value: f32) -> f32 {
 
 // convenience function to convert the Array struct to slices
 // this is meant for use in dual vector operations
-fn as_flat_slices<'a>(left: &'a Array, right: &'a Array) -> (&'a [f32], &'a [f32], Array) {
-    (left.slice(), right.slice(), Array::zero_padded(left.len()))
+fn as_flat_slices<'a>(left: &'a SignedF32Array, right: &'a SignedF32Array) -> (&'a [f32], &'a [f32], SignedF32Array) {
+    (left.slice(), right.slice(), SignedF32Array::default_padded(left.len()))
 }

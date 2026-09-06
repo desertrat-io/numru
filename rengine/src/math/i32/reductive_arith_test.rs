@@ -2,8 +2,8 @@
 #[cfg(test)]
 mod tests {
     use crate::data::array::SignedIntArray;
-    use crate::math::reductive_arg_i32::argmin;
-    use crate::math::reductive_arith_i32::{max, mean, min, sum};
+    use crate::math::i32::reductive_arg::argmin;
+    use crate::math::i32::reductive_arith::{max, mean, min, sum};
     use crate::matrix::ops::Mode;
 
     const EMPTY: &[i32] = &[];

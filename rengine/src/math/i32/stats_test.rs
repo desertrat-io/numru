@@ -2,8 +2,8 @@
 #[cfg(test)]
 mod tests {
     use crate::data::array::SignedIntArray;
-    use crate::math::stats::VarianceType;
-    use crate::math::stats_i32::{std, var};
+    use crate::math::generic::stats::VarianceType;
+    use crate::math::i32::stats::{std, var};
     use crate::matrix::ops::Mode;
 
     fn assert_variances(values: &[i32], expected_sample: i32, expected_population: i32) {

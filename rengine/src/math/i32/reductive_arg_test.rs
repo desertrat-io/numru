@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod tests {
     use crate::data::array::SignedIntArray;
-    use crate::math::reductive_arg_i32::{argmax, argmin};
+    use crate::math::i32::reductive_arg::{argmax, argmin};
     use crate::matrix::ops::Mode;
 
     const EMPTY: &[i32] = &[];

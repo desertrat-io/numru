@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use crate::data::array::Array;
+    use crate::data::array::SignedF32Array;
     use crate::logic::compare;
     use crate::matrix::ops::Mode;
 
-    fn get_compare_fixture() -> (Array, Array) {
+    fn get_compare_fixture() -> (SignedF32Array, SignedF32Array) {
         (
-            Array::new(vec![3.0, 2.0, 2.0, -1.0, 0.0]),
-            Array::new(vec![2.0, 2.0, 3.0, -2.0, 1.0]),
+            SignedF32Array::new(vec![3.0, 2.0, 2.0, -1.0, 0.0]),
+            SignedF32Array::new(vec![2.0, 2.0, 3.0, -2.0, 1.0]),
         )
     }
 
