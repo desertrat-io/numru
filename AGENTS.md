@@ -143,6 +143,7 @@ Agents must not:
 - make architecture decisions without human approval
 - perform final review or approval
 - act as maintainers
+- add test code to main code files, only to specified _test files
 
 Core code in this repository includes:
 

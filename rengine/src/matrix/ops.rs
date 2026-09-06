@@ -58,6 +58,13 @@ pub enum Mode {
     ParNeon,
 }
 
+#[derive(Clone, Copy)]
+pub enum LinAlgMode {
+    Normal,
+    Blas,
+    ParBlas,
+}
+
 pub(crate) fn binary_op_1(left: &[f32], result: &mut [f32], op: ScalarOp) {
     assert_eq!(left.len(), result.len());
     for i in 0..left.len() {

@@ -1,4 +1,4 @@
-use crate::data::array::Array;
+use crate::data::array::SignedF32Array;
 use crate::matrix::ops::*;
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::{vceqq_f32, vcgtq_f32};
@@ -9,9 +9,9 @@ use std::arch::aarch64::{vceqq_f32, vcgtq_f32};
 /// however defining a constant for true and false is fine, but not currently needed
 ///
 
-pub fn gt(left: Array, right: Array, mode: Mode) -> Array {
+pub fn gt(left: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
     assert_eq!(left.len(), right.len());
-    let mut result = Array::zero_padded(left.len());
+    let mut result = SignedF32Array::default_padded(left.len());
     let left_slice = left.slice();
     let right_slice = right.slice();
     match mode {
@@ -41,9 +41,9 @@ fn gt_scalar_32(left_element: f32, right_element: f32) -> f32 {
     (left_element > right_element) as u8 as f32
 }
 
-pub fn eq(left: Array, right: Array, mode: Mode) -> Array {
+pub fn eq(left: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
     assert_eq!(left.len(), right.len());
-    let mut result = Array::zero_padded(left.len());
+    let mut result = SignedF32Array::default_padded(left.len());
     match mode {
         Mode::Normal => binary_op_2(
             left.slice(),

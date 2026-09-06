@@ -1,5 +1,5 @@
 use crate::data::array::SignedIntArray;
-use crate::math::stats::VarianceType;
+use crate::math::generic::stats::VarianceType;
 use crate::matrix::ops::Mode;
 trait StatsI32Op {
     const STARTING_MEAN: i32;
@@ -71,7 +71,7 @@ pub fn var(vector: SignedIntArray, mode: Mode, sample_type: VarianceType) -> i32
     }
     // TODO: I think this can be done in 1 pass instead of 2 so this instruction can be removed
     // and put closer to implementation
-    let sum = crate::math::reductive_arith_i32::sum(&vector, mode);
+    let sum = crate::math::i32::reductive_arith::sum(&vector, mode);
     let initial_mean = sum / vector.len() as i32;
     match (mode, sample_type) {
         (Mode::Normal, VarianceType::Sample) => {

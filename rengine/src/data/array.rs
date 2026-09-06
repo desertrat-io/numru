@@ -1,83 +1,35 @@
-// TODO: Update these so it's just a generic vector, no need to hardcode the type. This is for
-// todo list organization
+pub const CONTIGUOUS_STRIDE: i32 = 1;
 
-#[derive(Clone, Debug)]
-pub struct Array {
-    data: Vec<f32>,
+#[derive(Debug, Clone, Default)]
+pub struct Array<T> {
+    data: Vec<T>,
     len: usize,
 }
-impl Array {
-    pub fn new(data: Vec<f32>) -> Self {
+
+impl<T: Default + Clone> Array<T> {
+    pub fn new(data: Vec<T>) -> Self {
         let len = data.len();
         Self { data, len }
     }
 
-    pub fn zero_padded(len: usize) -> Self {
-        Self {
-            data: vec![0.0; len],
-            len,
-        }
-    }
-
-    pub fn slice(&self) -> &[f32] {
+    pub fn slice(&self) -> &[T] {
         &self.data
     }
 
-    pub fn mut_slice(&mut self) -> &mut [f32] {
+    pub fn mut_slice(&mut self) -> &mut [T] {
         &mut self.data
     }
 
     pub fn len(&self) -> usize {
         self.len
     }
-}
 
-#[derive(Clone, Debug)]
-pub struct BoolArray {
-    data: Vec<bool>,
-    len: usize,
-}
-
-impl BoolArray {
-    pub fn new(data: Vec<bool>) -> Self {
-        let len = data.len();
-        Self { data, len }
-    }
-
-    pub fn slice(&self) -> &[bool] {
-        &self.data
-    }
-
-    pub fn mut_slice(&mut self) -> &mut [bool] {
-        &mut self.data
-    }
-
-    pub fn len(&self) -> usize {
-        self.len
+    pub fn default_padded(len: usize) -> Self {
+        Self::new(vec![T::default(); len])
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct SignedIntArray {
-    data: Vec<i32>,
-    len: usize,
-}
-
-impl SignedIntArray {
-    pub fn new(data: Vec<i32>) -> Self {
-        let len = data.len();
-        Self { data, len }
-    }
-
-    pub fn slice(&self) -> &[i32] {
-        &self.data
-    }
-
-    pub fn mut_slice(&mut self) -> &mut [i32] {
-        &mut self.data
-    }
-
-    pub fn len(&self) -> usize {
-        self.len
-    }
-}
+pub type SignedF32Array = Array<f32>;
+pub type SignedF64Array = Array<f64>;
+pub type BoolArray = Array<bool>;
+pub type SignedIntArray = Array<i32>;

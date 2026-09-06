@@ -1,14 +1,28 @@
+#[cfg(feature = "blas-apple")]
+use blas_src as _;
 pub mod math {
-    pub mod arith;
-    mod arith_test;
-    pub mod reductive_arg_i32;
-    mod reductive_arg_i32_test;
-    pub mod reductive_arith_i32;
-    mod reductive_arith_i32_test;
-    pub mod trig;
-    pub mod stats;
-    pub mod stats_i32;
-    mod stats_i32_test;
+    pub mod f32 {
+        pub mod arith;
+        mod arith_test;
+        pub mod linalg;
+        mod linalg_test;
+    }
+
+    pub mod f64 {
+        pub mod linalg;
+        mod linalg_test;
+    }
+    pub mod i32 {
+        pub mod reductive_arg;
+        mod reductive_arg_test;
+        pub mod reductive_arith;
+        mod reductive_arith_test;
+        pub mod stats;
+        mod stats_test;
+    }
+    pub mod generic {
+        pub mod stats;
+    }
 }
 
 pub mod data {
