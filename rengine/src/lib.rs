@@ -27,6 +27,8 @@ pub mod math {
 
 pub mod data {
     pub mod array;
+    pub mod matrix;
+    mod matrix_test;
 }
 
 pub mod logic {
