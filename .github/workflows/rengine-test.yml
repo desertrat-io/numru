@@ -43,6 +43,6 @@ jobs:
           workspaces: |
             . -> target
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run rengine tests
         run: cargo test -p rengine --all-targets
