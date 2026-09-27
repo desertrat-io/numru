@@ -17,8 +17,8 @@
 
 use crate::data::array::SignedF32Array;
 
-use crate::matrix::ops::{Mode,
-                         binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3,
+use crate::matrix::ops::{
+    Mode, binary_op_1, binary_op_2, binary_op_3, neon_1, neon_2, neon_3, par_1, par_2, par_3,
 };
 
 #[cfg(target_arch = "aarch64")]
@@ -189,7 +189,12 @@ pub fn div(left: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32
 
 /// Fused operations
 #[cfg(target_arch = "aarch64")]
-pub fn add_mul(left: SignedF32Array, middle: SignedF32Array, right: SignedF32Array, mode: Mode) -> SignedF32Array {
+pub fn add_mul(
+    left: SignedF32Array,
+    middle: SignedF32Array,
+    right: SignedF32Array,
+    mode: Mode,
+) -> SignedF32Array {
     assert_eq!(left.len(), middle.len());
     assert_eq!(left.len(), right.len());
     let left_slice = left.slice();
@@ -274,6 +279,13 @@ fn log10_scalar_32(value: f32) -> f32 {
 
 // convenience function to convert the Array struct to slices
 // this is meant for use in dual vector operations
-fn as_flat_slices<'a>(left: &'a SignedF32Array, right: &'a SignedF32Array) -> (&'a [f32], &'a [f32], SignedF32Array) {
-    (left.slice(), right.slice(), SignedF32Array::default_padded(left.len()))
+fn as_flat_slices<'a>(
+    left: &'a SignedF32Array,
+    right: &'a SignedF32Array,
+) -> (&'a [f32], &'a [f32], SignedF32Array) {
+    (
+        left.slice(),
+        right.slice(),
+        SignedF32Array::default_padded(left.len()),
+    )
 }

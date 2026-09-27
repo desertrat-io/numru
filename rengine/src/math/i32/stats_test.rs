@@ -1,7 +1,7 @@
 // TODO: Codex experimental test code, evaluate for usefulness and correctness.
 #[cfg(test)]
 mod tests {
-    use crate::data::array::SignedIntArray;
+    use crate::data::array::SignedInt32Array;
     use crate::math::generic::stats::VarianceType;
     use crate::math::i32::stats::{std, var};
     use crate::matrix::ops::Mode;
@@ -9,7 +9,7 @@ mod tests {
     fn assert_variances(values: &[i32], expected_sample: i32, expected_population: i32) {
         assert_eq!(
             var(
-                SignedIntArray::new(values.to_vec()),
+                SignedInt32Array::new(values.to_vec()),
                 Mode::Normal,
                 VarianceType::Sample,
             ),
@@ -17,7 +17,7 @@ mod tests {
         );
         assert_eq!(
             var(
-                SignedIntArray::new(values.to_vec()),
+                SignedInt32Array::new(values.to_vec()),
                 Mode::Normal,
                 VarianceType::Population,
             ),
@@ -28,7 +28,7 @@ mod tests {
     fn assert_standard_deviations(values: &[i32], expected_sample: i32, expected_population: i32) {
         assert_eq!(
             std(
-                SignedIntArray::new(values.to_vec()),
+                SignedInt32Array::new(values.to_vec()),
                 Mode::Normal,
                 VarianceType::Sample,
             ),
@@ -36,7 +36,7 @@ mod tests {
         );
         assert_eq!(
             std(
-                SignedIntArray::new(values.to_vec()),
+                SignedInt32Array::new(values.to_vec()),
                 Mode::Normal,
                 VarianceType::Population,
             ),
@@ -130,7 +130,7 @@ mod tests {
     #[should_panic]
     fn variance_normal_panics_when_sum_overflows_i32() {
         let _ = var(
-            SignedIntArray::new(vec![i32::MAX, i32::MAX]),
+            SignedInt32Array::new(vec![i32::MAX, i32::MAX]),
             Mode::Normal,
             VarianceType::Sample,
         );
@@ -140,7 +140,7 @@ mod tests {
     #[should_panic]
     fn variance_normal_panics_when_squared_deviation_overflows_i32() {
         let _ = var(
-            SignedIntArray::new(vec![i32::MAX, i32::MIN]),
+            SignedInt32Array::new(vec![i32::MAX, i32::MIN]),
             Mode::Normal,
             VarianceType::Population,
         );

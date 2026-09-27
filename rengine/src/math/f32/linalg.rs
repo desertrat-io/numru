@@ -1,15 +1,89 @@
-use crate::data::array::{CONTIGUOUS_STRIDE, SignedF32Array};
+use crate::data::array::{Array, CONTIGUOUS_STRIDE, SignedF32Array};
 use crate::data::matrix::F32Matrix;
 use crate::matrix::ops::LinAlgMode;
 use blas::{dsdot, sgemm};
 
+pub fn transpose(matrix: F32Matrix, mode: LinAlgMode) -> F32Matrix {
+    assert_ne!(matrix.cols(), usize::MAX, "Invalid matrix dimensions");
+    if matrix.rows() == 0 || matrix.cols() == 0 {
+        return F32Matrix::empty(matrix.rows(), matrix.cols());
+    }
+    match mode {
+        LinAlgMode::Normal => transpose_scalar(matrix),
+        LinAlgMode::Blas => transpose_blas(matrix),
+        _ => todo!(),
+    }
+}
+
+fn transpose_scalar(matrix: F32Matrix) -> F32Matrix {
+    let mut result_matrix = F32Matrix::empty(matrix.rows(), matrix.cols());
+    // rust shenanigans, might try to redo this later so we don't need a placeholder to keep
+    // the value in memory
+    let result = result_matrix.slice_mut();
+    unsafe {
+        for i in 0..matrix.rows() {
+            let current_row = matrix.row_unchecked(i);
+            for j in 0..matrix.cols() {
+                result[j * matrix.rows() + i] = current_row[j];
+            }
+        }
+    }
+    // TODO: benchmark, this looks like it'll result in a memory spike until the function returns
+    F32Matrix::new(
+        matrix.rows(),
+        matrix.cols(),
+        Array::<f32>::new(result.to_vec()),
+    )
+}
+
+fn transpose_blas(matrix: F32Matrix) -> F32Matrix {
+    let cols = matrix.cols();
+    let rows = matrix.rows();
+    // TODO: move to base matrix struct definition
+    let mut ident_contiguous_matrix = vec![0.0_f32; cols * cols];
+    for i in 0..cols {
+        ident_contiguous_matrix[i * cols + i] = 1.0;
+    }
+
+    let mut result = F32Matrix::empty(rows, cols);
+
+    unsafe {
+        sgemm(
+            b'T',
+            b'N',
+            rows as i32,
+            cols as i32,
+            cols as i32,
+            1.0,
+            matrix.slice(),
+            cols as i32,
+            &ident_contiguous_matrix,
+            cols as i32,
+            0.0,
+            result.slice_mut(),
+            rows as i32,
+        );
+    }
+
+    result
+}
+
+/// zero dimensional matrices are not supported in this version
 pub fn mat_mul(left_matrix: F32Matrix, right_matrix: F32Matrix, mode: LinAlgMode) -> F32Matrix {
+    let left_cols = left_matrix.cols();
+    let right_cols = right_matrix.cols();
+    let left_rows = left_matrix.rows();
+    let right_rows = right_matrix.rows();
     assert_eq!(
-        left_matrix.cols(),
-        right_matrix.rows(),
+        left_cols, right_rows,
         "Invalid matrix shape, LHS columns do not match RHS rows"
     );
-    let result: F32Matrix = F32Matrix::empty(left_matrix.rows(), right_matrix.cols());
+    let result: F32Matrix = F32Matrix::empty(right_cols, left_rows);
+
+    // if we have zero dim matrices, just return the empty matrix of that zero initialized to 0
+    if left_rows == 0 || left_cols == 0 || right_cols == 0 {
+        return result;
+    }
     match mode {
         LinAlgMode::Normal => mat_mul_scalar(left_matrix, right_matrix, result),
         LinAlgMode::Blas => mat_mul_blas(left_matrix, right_matrix, result),

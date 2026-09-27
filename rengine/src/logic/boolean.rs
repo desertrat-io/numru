@@ -11,8 +11,8 @@
 
 use crate::data::array::BoolArray;
 use crate::matrix::ops::{
-    boolean_binary_op_1, boolean_binary_op_2, boolean_neon_1, boolean_neon_2, boolean_par_1, boolean_par_2,
-    Mode,
+    Mode, boolean_binary_op_1, boolean_binary_op_2, boolean_neon_1, boolean_neon_2, boolean_par_1,
+    boolean_par_2,
 };
 use std::arch::aarch64::{vandq_u8, vmvnq_u8};
 

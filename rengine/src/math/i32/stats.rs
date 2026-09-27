@@ -1,4 +1,4 @@
-use crate::data::array::SignedIntArray;
+use crate::data::array::SignedInt32Array;
 use crate::math::generic::stats::VarianceType;
 use crate::matrix::ops::Mode;
 trait StatsI32Op {
@@ -57,15 +57,15 @@ fn var_neon<R: StatsI32Op>(vector: &[i32], starting_mean: i32, mode: Mode) -> i3
 
 /// Since this is a non floating point operation, we have to round the naswer
 /// Rounding abides by f32 rounding rules
-pub fn std(vector: SignedIntArray, mode: Mode, sample_type: VarianceType) -> i32 {
+pub fn std(vector: SignedInt32Array, mode: Mode, sample_type: VarianceType) -> i32 {
     let variance = match mode {
         Mode::Normal => var(vector, mode, sample_type) as f32,
-        _ => unimplemented!()
+        _ => unimplemented!(),
     };
     variance.sqrt().round() as i32
 }
 
-pub fn var(vector: SignedIntArray, mode: Mode, sample_type: VarianceType) -> i32 {
+pub fn var(vector: SignedInt32Array, mode: Mode, sample_type: VarianceType) -> i32 {
     if vector.len() < 2 {
         return i32::MIN;
     }
@@ -80,9 +80,15 @@ pub fn var(vector: SignedIntArray, mode: Mode, sample_type: VarianceType) -> i32
         (Mode::Neon, VarianceType::Sample) => {
             var_neon::<SampleVar>(vector.slice(), initial_mean, mode)
         }
-        (_, VarianceType::Sample) => { unimplemented!() }
-        (Mode::Normal, VarianceType::Population) => var_scalar::<PopulationVar>(vector.slice(), initial_mean),
-        (Mode::Neon, VarianceType::Population) => var_neon::<PopulationVar>(vector.slice(), initial_mean, mode),
+        (_, VarianceType::Sample) => {
+            unimplemented!()
+        }
+        (Mode::Normal, VarianceType::Population) => {
+            var_scalar::<PopulationVar>(vector.slice(), initial_mean)
+        }
+        (Mode::Neon, VarianceType::Population) => {
+            var_neon::<PopulationVar>(vector.slice(), initial_mean, mode)
+        }
         (_, VarianceType::Population) => unimplemented!(),
     }
 }

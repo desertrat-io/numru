@@ -32,4 +32,4 @@ impl<T: Default + Clone> Array<T> {
 pub type SignedF32Array = Array<f32>;
 pub type SignedF64Array = Array<f64>;
 pub type BoolArray = Array<bool>;
-pub type SignedIntArray = Array<i32>;
+pub type SignedInt32Array = Array<i32>;

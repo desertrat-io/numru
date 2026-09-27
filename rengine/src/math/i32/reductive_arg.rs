@@ -1,4 +1,4 @@
-use crate::data::array::SignedIntArray;
+use crate::data::array::SignedInt32Array;
 use crate::matrix::ops::{Mode, PAR_CHUNK_SIZE};
 use rayon::iter::IndexedParallelIterator;
 use rayon::iter::ParallelIterator;
@@ -231,7 +231,7 @@ fn arg_neon_par<R: ArgReductionOp>(vector: &[i32]) -> u32 {
         .1 as u32
 }
 
-pub fn argmax(vector: SignedIntArray, mode: Mode) -> u32 {
+pub fn argmax(vector: SignedInt32Array, mode: Mode) -> u32 {
     match mode {
         Mode::Normal => arg_scalar::<ArgMax>(vector.slice()),
         Mode::Neon => arg_neon::<ArgMax>(vector.slice()) as u32,
@@ -239,7 +239,7 @@ pub fn argmax(vector: SignedIntArray, mode: Mode) -> u32 {
     }
 }
 
-pub fn argmin(vector: SignedIntArray, mode: Mode) -> u32 {
+pub fn argmin(vector: SignedInt32Array, mode: Mode) -> u32 {
     match mode {
         Mode::Normal => arg_scalar::<ArgMin>(vector.slice()),
         Mode::Neon => arg_neon::<ArgMin>(vector.slice()) as u32,

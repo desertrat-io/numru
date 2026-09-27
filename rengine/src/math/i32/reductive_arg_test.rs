@@ -1,7 +1,7 @@
 // TODO: Codex experimental test code, evaluate for usefulness and correctness
 #[cfg(test)]
 mod tests {
-    use crate::data::array::SignedIntArray;
+    use crate::data::array::SignedInt32Array;
     use crate::math::i32::reductive_arg::{argmax, argmin};
     use crate::matrix::ops::Mode;
 
@@ -56,8 +56,8 @@ mod tests {
         -14,
     ];
 
-    fn signed_int_vector(values: &[i32]) -> SignedIntArray {
-        SignedIntArray::new(values.to_vec())
+    fn signed_int_vector(values: &[i32]) -> SignedInt32Array {
+        SignedInt32Array::new(values.to_vec())
     }
 
     #[test]
