@@ -1,7 +1,7 @@
 // TODO: Codex experimental test code, evaluate for usefulness and correctness
 #[cfg(test)]
 mod tests {
-    use crate::data::array::SignedIntArray;
+    use crate::data::array::SignedInt32Array;
     use crate::math::i32::reductive_arg::argmin;
     use crate::math::i32::reductive_arith::{max, mean, min, sum};
     use crate::matrix::ops::Mode;
@@ -30,11 +30,11 @@ mod tests {
 
     const PAR_CHUNK_SIZE: usize = 4096;
 
-    fn range_vector(len: usize) -> SignedIntArray {
-        SignedIntArray::new((0..len as i32).collect())
+    fn range_vector(len: usize) -> SignedInt32Array {
+        SignedInt32Array::new((0..len as i32).collect())
     }
-    fn signed_int_vector(values: &[i32]) -> SignedIntArray {
-        SignedIntArray::new(values.to_vec())
+    fn signed_int_vector(values: &[i32]) -> SignedInt32Array {
+        SignedInt32Array::new(values.to_vec())
     }
 
     #[test]

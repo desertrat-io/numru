@@ -1,4 +1,4 @@
-use crate::data::array::SignedIntArray;
+use crate::data::array::SignedInt32Array;
 
 use crate::matrix::ops::{Mode, signed_int_neon_1, signed_int_par_1};
 #[cfg(target_arch = "aarch64")]
@@ -6,7 +6,7 @@ use std::arch::aarch64::*;
 
 // so the sum is a useful function, but we don't want to keep cloning vectors all over, so it's cheaper
 // to just borrow
-pub fn sum(vector: &SignedIntArray, mode: Mode) -> i32 {
+pub fn sum(vector: &SignedInt32Array, mode: Mode) -> i32 {
     let result: i32;
     match mode {
         Mode::Normal => result = reductive_sum_scalar_32(vector.slice(), None),
@@ -32,7 +32,7 @@ pub fn sum(vector: &SignedIntArray, mode: Mode) -> i32 {
     result
 }
 
-pub fn min(vector: SignedIntArray, mode: Mode) -> i32 {
+pub fn min(vector: SignedInt32Array, mode: Mode) -> i32 {
     let result: i32;
     match mode {
         Mode::Normal => result = reductive_min_scalar_32(vector.slice(), None),
@@ -58,7 +58,7 @@ pub fn min(vector: SignedIntArray, mode: Mode) -> i32 {
     result
 }
 
-pub fn max(vector: SignedIntArray, mode: Mode) -> i32 {
+pub fn max(vector: SignedInt32Array, mode: Mode) -> i32 {
     let result: i32;
     match mode {
         Mode::Normal => result = reductive_max_scalar_32(vector.slice(), None),
@@ -84,7 +84,7 @@ pub fn max(vector: SignedIntArray, mode: Mode) -> i32 {
     result
 }
 
-pub fn mean(vector: SignedIntArray, mode: Mode) -> i32 {
+pub fn mean(vector: SignedInt32Array, mode: Mode) -> i32 {
     // this is actually much simpler than before because we can just reuse sum and divide
     // at the end of processing
     if vector.len() == 0 {

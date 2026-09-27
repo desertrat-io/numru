@@ -2,8 +2,8 @@ use rayon::prelude::*;
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::{
-    float32x4_t, int32x4_t, uint32x4_t, uint8x16_t, vandq_u32, vandq_u8, vcvtq_f32_u32, vdupq_n_u32,
-    vdupq_n_u8, vld1q_f32, vld1q_s32, vld1q_u8, vst1q_f32, vst1q_u8,
+    float32x4_t, int32x4_t, uint8x16_t, uint32x4_t, vandq_u8, vandq_u32, vcvtq_f32_u32, vdupq_n_u8,
+    vdupq_n_u32, vld1q_f32, vld1q_s32, vld1q_u8, vst1q_f32, vst1q_u8,
 };
 
 pub(crate) const NUM_FLOAT_LANES_32: usize = 4;

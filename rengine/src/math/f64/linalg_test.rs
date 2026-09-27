@@ -3,8 +3,8 @@ mod tests {
     use crate::data::array::{Array, SignedF64Array};
     use crate::data::matrix::F64Matrix;
     use crate::math::f64::linalg::{dot, mat_mul};
-    use crate::matrix::ops::Mode;
     use crate::matrix::ops::LinAlgMode;
+    use crate::matrix::ops::Mode;
 
     fn matrix(cols: usize, rows: usize, values: &[f64]) -> F64Matrix {
         F64Matrix::new(cols, rows, Array::new(values.to_vec()))

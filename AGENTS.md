@@ -144,6 +144,10 @@ Agents must not:
 - perform final review or approval
 - act as maintainers
 - add test code to main code files, only to specified _test files
+- reference code files unless specifically asked to, or if that file is attached in the message being sent. Ignore
+  when it has been previously attached. Once the answer is given, assume that access to code files is restricted again
+  unless
+  this rule takes effect
 
 Core code in this repository includes:
 
