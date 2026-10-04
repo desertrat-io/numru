@@ -21,6 +21,7 @@ pub mod math {
         mod stats_test;
     }
     pub mod generic {
+        pub mod arith;
         pub mod stats;
     }
 }

@@ -3,7 +3,7 @@
 mod tests {
     use crate::data::array::SignedInt32Array;
     use crate::math::i32::reductive_arg::argmin;
-    use crate::math::i32::reductive_arith::{max, mean, min, sum};
+    use crate::math::i32::reductive_arith::{l2_norm, max, mean, min, sum};
     use crate::matrix::ops::Mode;
 
     const EMPTY: &[i32] = &[];
@@ -299,6 +299,153 @@ mod tests {
         let vector = signed_int_vector(THREE_ASC);
         let result = mean(vector, Mode::Normal);
         assert_eq!(result, 2);
+    }
+
+    #[test]
+    fn reductive_scalar_l2_norm() {
+        let vector = signed_int_vector(&[3, 4]);
+        assert_eq!(l2_norm(vector, Mode::Normal), 5);
+    }
+
+    #[test]
+    fn reductive_scalar_l2_norm_handles_negative_values() {
+        let vector = signed_int_vector(&[-3, 4]);
+        assert_eq!(l2_norm(vector, Mode::Normal), 5);
+    }
+
+    #[test]
+    fn reductive_scalar_l2_norm_empty_vec_returns_zero() {
+        let vector = signed_int_vector(EMPTY);
+        assert_eq!(l2_norm(vector, Mode::Normal), 0);
+    }
+
+    #[test]
+    fn reductive_scalar_l2_norm_zero_vector_returns_zero() {
+        let vector = signed_int_vector(&[0, 0, 0]);
+        assert_eq!(l2_norm(vector, Mode::Normal), 0);
+    }
+
+    #[test]
+    fn reductive_scalar_l2_norm_singleton_returns_absolute_value() {
+        assert_eq!(l2_norm(signed_int_vector(&[7]), Mode::Normal), 7);
+        assert_eq!(l2_norm(signed_int_vector(&[-7]), Mode::Normal), 7);
+    }
+
+    #[test]
+    fn reductive_scalar_l2_norm_truncates_non_integer_square_root() {
+        let vector = signed_int_vector(&[1, 1]);
+        assert_eq!(l2_norm(vector, Mode::Normal), 1);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_empty_vec_returns_zero() {
+        assert_eq!(l2_norm(signed_int_vector(EMPTY), Mode::Neon), 0);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_singleton_returns_absolute_value() {
+        assert_eq!(l2_norm(signed_int_vector(&[7]), Mode::Neon), 7);
+        assert_eq!(l2_norm(signed_int_vector(&[-7]), Mode::Neon), 7);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_handles_exact_neon_chunk() {
+        let vector = signed_int_vector(&[-3, 4, 12, -5]);
+
+        // floor(sqrt(9 + 16 + 144 + 25)) = floor(sqrt(194)) = 13.
+        assert_eq!(l2_norm(vector, Mode::Neon), 13);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_handles_tail_after_one_chunk() {
+        let vector = signed_int_vector(&[3, 4, 12, 5, -4]);
+
+        // sqrt(9 + 16 + 144 + 25 + 16) = sqrt(210), truncated to 14.
+        assert_eq!(l2_norm(vector, Mode::Neon), 14);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_handles_tail_shorter_than_one_chunk() {
+        let vector = signed_int_vector(&[-6, 8, 0]);
+
+        // sqrt(36 + 64) = 10; the final zero is processed by the scalar tail.
+        assert_eq!(l2_norm(vector, Mode::Neon), 10);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_handles_multiple_chunks_and_tail() {
+        let vector = signed_int_vector(&[1, 2, 2, 4, -2, -4, 1, 2, 2]);
+
+        // floor(sqrt(1 + 4 + 4 + 16 + 4 + 16 + 1 + 4 + 4)) = floor(sqrt(54)) = 7.
+        assert_eq!(l2_norm(vector, Mode::Neon), 7);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_truncates_non_integer_square_root() {
+        assert_eq!(l2_norm(signed_int_vector(&[1, 1]), Mode::Neon), 1);
+    }
+
+    #[test]
+    fn reductive_neon_l2_norm_handles_zero_vector() {
+        assert_eq!(l2_norm(signed_int_vector(&[0, 0, 0, 0, 0]), Mode::Neon), 0);
+    }
+
+    #[test]
+    fn reductive_l2_norm_accepts_i32_max_in_all_modes() {
+        for mode in [Mode::Normal, Mode::Neon, Mode::ParNeon] {
+            assert_eq!(
+                l2_norm(signed_int_vector(&[i32::MAX]), mode),
+                i32::MAX
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn reductive_scalar_l2_norm_rejects_i32_min() {
+        l2_norm(signed_int_vector(&[i32::MIN]), Mode::Normal);
+    }
+
+    #[test]
+    #[should_panic]
+    fn reductive_neon_l2_norm_rejects_i32_min() {
+        l2_norm(signed_int_vector(&[i32::MIN]), Mode::Neon);
+    }
+
+    #[test]
+    #[should_panic]
+    fn reductive_parallel_neon_l2_norm_rejects_i32_min() {
+        l2_norm(signed_int_vector(&[i32::MIN]), Mode::ParNeon);
+    }
+
+    #[test]
+    #[should_panic]
+    fn reductive_scalar_l2_norm_panics_when_result_exceeds_i32() {
+        l2_norm(signed_int_vector(&[i32::MAX, i32::MAX]), Mode::Normal);
+    }
+
+    #[test]
+    #[should_panic]
+    fn reductive_neon_l2_norm_panics_when_result_exceeds_i32() {
+        l2_norm(signed_int_vector(&[i32::MAX, i32::MAX]), Mode::Neon);
+    }
+
+    #[test]
+    #[should_panic]
+    fn reductive_parallel_neon_l2_norm_panics_when_result_exceeds_i32() {
+        l2_norm(
+            signed_int_vector(&[i32::MAX, i32::MAX]),
+            Mode::ParNeon,
+        );
+    }
+
+    #[test]
+    fn reductive_parallel_neon_l2_norm_handles_huge_values_across_chunks() {
+        let values = vec![1_000_000; PAR_CHUNK_SIZE * 4];
+        let vector = signed_int_vector(&values);
+
+        // sqrt(16_384 * 1_000_000²) = 128 * 1_000_000.
+        assert_eq!(l2_norm(vector, Mode::ParNeon), 128_000_000);
     }
 
     #[test]
