@@ -1,10 +1,10 @@
-use magnus::{Error, Ruby, function};
-fn numru_hello() -> String {
-    format!("{}", String::from("Hello there!"))
-}
+pub mod converters;
+pub mod math;
+use magnus::{Error, Ruby};
 
 #[magnus::init(name = "numru")]
 fn init(ruby: &Ruby) -> Result<(), Error> {
-    ruby.define_global_function("hello", function!(numru_hello, 0));
+    let numru = ruby.define_module("Numru")?;
+    math::init(numru)?;
     Ok(())
 }
