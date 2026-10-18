@@ -1,3 +1,5 @@
+[![REngine Core](https://api-dkr.cloudsmith.com/v1/badges/version/desertrat-io/numru/cargo/rengine/latest/x/?render=true&show_latest=true)](https://cloudsmith.io/~desertrat-io/repos/numru/packages/detail/cargo/rengine/latest/)
+
 # What's in a name?
 
 NumRu is a NUMeric RUst and RUby computing engine for computational ML related workloads.
