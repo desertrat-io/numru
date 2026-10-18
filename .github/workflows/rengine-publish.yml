@@ -21,7 +21,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     env:
-      CARGO_TARGET_DIR: ${{ runner.temp }}/rengine-package
+      CARGO_TARGET_DIR: ${{ github.workspace }}/rengine-package
 
     steps:
       - name: Check out the publishing revision
