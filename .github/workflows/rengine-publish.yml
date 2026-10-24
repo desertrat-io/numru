@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   actions: read
+  pull-requests: read
 
 concurrency:
   group: publish-rengine-cloudsmith
@@ -27,18 +28,34 @@ jobs:
         shell: bash
 
     steps:
-      - name: Require passing tests for the publishing revision
+      - name: Require passing rengine tests for the last merged branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Inspect the latest run regardless of status; never fall back to an older success.
-          latest=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow rengine-test.yml \
-            --branch main --event push --limit 1 --json status,conclusion,headSha)
-          if ! jq -e --arg sha "$GITHUB_SHA" \
-            '.[0] | .status == "completed" and .conclusion == "success" and .headSha == $sha' <<< "$latest" > /dev/null; then
-            echo "::error::The latest rengine-test push run on main must pass for this exact revision before deploying."
+          # Use merge time, not PR update time, to identify the last merged branch.
+          merged_pr=$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/pulls?state=closed&base=main&per_page=100" \
+            --jq '.[] | select(.merged_at != null) | {number, merged_at, head}' \
+            | jq -s 'max_by(.merged_at)')
+          if [[ "$merged_pr" == "null" ]]; then
+            echo "::error::No merged pull request into main was found."
             exit 1
           fi
+          pr_number=$(jq -er '.number' <<< "$merged_pr")
+          head_branch=$(jq -er '.head.ref' <<< "$merged_pr")
+          head_sha=$(jq -er '.head.sha' <<< "$merged_pr")
+
+          # Match the PR's final commit, not the merge/squash commit on main.
+          # Do not filter by success: a newer failed or unfinished run must block deployment.
+          latest=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow rengine-test.yml \
+            --branch "$head_branch" --commit "$head_sha" --event pull_request --limit 1 \
+            --json status,conclusion,headSha,url)
+          if ! jq -e --arg sha "$head_sha" \
+            '.[0] | .status == "completed" and .conclusion == "success" and .headSha == $sha' <<< "$latest" > /dev/null; then
+            echo "::error::The latest rengine-test run for PR #$pr_number ($head_branch at $head_sha) must have completed successfully before deploying."
+            exit 1
+          fi
+          jq -r '.[0].url' <<< "$latest"
 
       - name: Check out the publishing revision
         uses: actions/checkout@v7
