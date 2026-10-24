@@ -1,0 +1,47 @@
+name: Test rext
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "rext/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rext-test-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rspec:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CARGO_REGISTRIES_CLOUDSMITH_TOKEN: ${{ secrets.CLOUDSMITH_API_KEY }}
+    defaults:
+      run:
+        working-directory: rext
+
+    steps:
+      - name: Check out PR merge revision
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch Cargo dependencies
+        run: cargo fetch --manifest-path ext/numru/Cargo.toml
+
+      - name: Install Ruby and gem dependencies
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: rext
+
+      - name: Run RSpec tests
+        run: bundle exec rake spec

@@ -1,0 +1,64 @@
+name: Publish rext to Cloudsmith
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches: [main]
+    paths:
+      - "rext/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-rext-cloudsmith
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rext
+    env:
+      RB_SYS_CARGO_PROFILE: release
+      # Avoid the Rust/macOS LINKEDIT alignment issue when stripping dylibs.
+      CARGO_PROFILE_RELEASE_STRIP: none
+
+    steps:
+      - name: Check out the publishing revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Ruby and gem dependencies
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: rext
+
+      - name: Build the compiled gem
+        run: bundle exec rake native gem
+
+      - name: Verify the packaged extension loads
+        run: |
+          gem install --local pkg/numru-rext-*.gem --no-document
+          ruby -e 'require "numru/numru"'
+
+      - name: Publish gem to Cloudsmith
+        uses: cloudsmith-io/action@master
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+        with:
+          format: ruby
+          owner: desertrat-io
+          repo: numru
+          file: rext/pkg/numru-rext-*.gem

@@ -2,14 +2,10 @@ name: Publish rengine to Cloudsmith
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [closed]
-    branches: [main]
-    paths:
-      - "rengine/**"
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: publish-rengine-cloudsmith
@@ -17,31 +13,58 @@ concurrency:
 
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
-    runs-on: macos-15
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'desertrat-io/numru' &&
+      github.ref == 'refs/heads/main'
+    runs-on: [ macos-15, macos-26 ]
     timeout-minutes: 30
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/rengine-package
+      RUSTUP_TOOLCHAIN: stable
+    defaults:
+      run:
+        shell: bash
 
     steps:
+      - name: Require passing tests for the publishing revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Inspect the latest run regardless of status; never fall back to an older success.
+          latest=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow rengine-test.yml \
+            --branch main --event push --limit 1 --json status,conclusion,headSha)
+          if ! jq -e --arg sha "$GITHUB_SHA" \
+            '.[0] | .status == "completed" and .conclusion == "success" and .headSha == $sha' <<< "$latest" > /dev/null; then
+            echo "::error::The latest rengine-test push run on main must pass for this exact revision before deploying."
+            exit 1
+          fi
+
       - name: Check out the publishing revision
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Install stable Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Cloudsmith CLI
+        uses: cloudsmith-io/cloudsmith-cli-action@v3
+        with:
+          api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Reject the current Cloudsmith version
+        run: |
+          version=$(cargo metadata --manifest-path rengine/Cargo.toml --no-deps --format-version 1 \
+            | jq -er '.packages[] | select(.name == "rengine") | .version')
+          latest_version=$(cloudsmith list packages desertrat-io/numru \
+            --query 'format:cargo AND name:^rengine$' --sort=-version --page-size 1 --output-format json \
+            | jq -r '.data[0].version // empty')
+          if [[ "$version" == "$latest_version" ]]; then
+            echo "::error::rengine $version is already the current version in Cloudsmith. Bump the crate version appropriately before deploying."
+            exit 1
+          fi
 
       - name: Package and verify the crate
         run: cargo package --manifest-path rengine/Cargo.toml
 
       - name: Publish crate to Cloudsmith
-        uses: cloudsmith-io/action@master
-        env:
-          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
-        with:
-          format: cargo
-          owner: desertrat-io
-          repo: numru
-          file: ${{ env.CARGO_TARGET_DIR }}/package/rengine-*.crate
+        run: cloudsmith push cargo desertrat-io/numru "$CARGO_TARGET_DIR"/package/rengine-*.crate
