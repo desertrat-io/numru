@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "rake/extensiontask"
+require "rb_sys/extensiontask"
 require "rspec/core/rake_task"
 
-Rake::ExtensionTask.new("numru") do |c|
+RbSys::ExtensionTask.new("numru", Gem::Specification.load("numru-rext.gemspec")) do |c|
   c.lib_dir = "lib/numru"
 end
 
