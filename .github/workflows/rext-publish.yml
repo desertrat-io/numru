@@ -22,6 +22,7 @@ jobs:
         working-directory: rext
     env:
       MACOSX_DEPLOYMENT_TARGET: "26.0"
+      NUMRU_GEM_PLATFORM: arm64-darwin-25
       CARGO_BUILD_TARGET: aarch64-apple-darwin
       RB_SYS_CARGO_PROFILE: release
       # Avoid the Rust/macOS LINKEDIT alignment issue when stripping dylibs.
@@ -50,7 +51,8 @@ jobs:
         run: |
           test "$(uname -m)" = "arm64"
           test "$(uname -r | cut -d. -f1)" = "25"
-          ruby -e 'abort "Expected arm64-darwin-25, got #{Gem::Platform.local}" unless Gem::Platform.local.to_s == "arm64-darwin-25"'
+          # Prebuilt Ruby may report an older Darwin version than the runner.
+          ruby -e 'platform = Gem::Platform.local; abort "Expected ARM64 macOS Ruby, got #{platform}" unless platform.cpu == "arm64" && platform.os == "darwin"'
 
       - name: Build the compiled gem
         run: bundle exec rake native gem
