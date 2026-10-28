@@ -15,12 +15,13 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.workflow == 'Publish rext to Cloudsmith'
-    runs-on: macos-27
+    runs-on: macos-26
     timeout-minutes: 30
     defaults:
       run:
         working-directory: rext
     env:
+      MACOSX_DEPLOYMENT_TARGET: "26.0"
       CARGO_BUILD_TARGET: aarch64-apple-darwin
       RB_SYS_CARGO_PROFILE: release
       # Avoid the Rust/macOS LINKEDIT alignment issue when stripping dylibs.
