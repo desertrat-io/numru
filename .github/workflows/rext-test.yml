@@ -2,9 +2,9 @@ name: Test rext
 
 on:
   pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ main ]
     paths:
+      - ".github/workflows/rext-test.yml"
       - "rext/**"
 
 permissions:

@@ -11,6 +11,9 @@ on:
     paths:
       - ".github/workflows/rengine-test.yml"
       - "rengine/**"
+concurrency:
+  group: rext-test-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   test:
