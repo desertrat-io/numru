@@ -5,6 +5,10 @@ require "rspec/core/rake_task"
 
 RbSys::ExtensionTask.new("numru", Gem::Specification.load("numru-rext.gemspec")) do |c|
   c.lib_dir = "lib/numru"
+  # Ruby's build host can differ from the native gem's deployment platform.
+  c.cross_compiling do |spec|
+    spec.platform = ENV.fetch("NUMRU_GEM_PLATFORM") if ENV.key?("NUMRU_GEM_PLATFORM")
+  end
 end
 
 RSpec::Core::RakeTask.new(:spec) do |spec|
