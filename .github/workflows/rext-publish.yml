@@ -15,7 +15,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.workflow == 'Publish rext to Cloudsmith'
-    runs-on: macos-26
+    runs-on: macos-27
     timeout-minutes: 30
     defaults:
       run:
