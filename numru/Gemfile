@@ -11,3 +11,7 @@ gem "rake", "~> 13.0"
 gem "rspec", "~> 3.0"
 
 gem "standard", "~> 1.3"
+
+source 'https://dl.cloudsmith.io/public/desertrat-io/numru/ruby/' do
+  gem 'numru-rext', '~> 0.1.0'
+end

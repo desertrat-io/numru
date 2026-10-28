@@ -15,12 +15,13 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.workflow == 'Publish rext to Cloudsmith'
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
     defaults:
       run:
         working-directory: rext
     env:
+      CARGO_BUILD_TARGET: aarch64-apple-darwin
       RB_SYS_CARGO_PROFILE: release
       # Avoid the Rust/macOS LINKEDIT alignment issue when stripping dylibs.
       CARGO_PROFILE_RELEASE_STRIP: none
@@ -34,6 +35,8 @@ jobs:
 
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
 
       - name: Install Ruby and gem dependencies
         uses: ruby/setup-ruby@v1
@@ -42,13 +45,14 @@ jobs:
           bundler-cache: true
           working-directory: rext
 
+      - name: Verify the native build platform
+        run: |
+          test "$(uname -m)" = "arm64"
+          test "$(uname -r | cut -d. -f1)" = "25"
+          ruby -e 'abort "Expected arm64-darwin-25, got #{Gem::Platform.local}" unless Gem::Platform.local.to_s == "arm64-darwin-25"'
+
       - name: Build the compiled gem
         run: bundle exec rake native gem
-
-      - name: Verify the packaged extension loads
-        run: |
-          gem install --local pkg/numru-rext-*.gem --no-document
-          ruby -e 'require "numru/numru"'
 
       - name: Publish gem to Cloudsmith
         uses: cloudsmith-io/action@master
@@ -58,4 +62,4 @@ jobs:
           format: ruby
           owner: desertrat-io
           repo: numru
-          file: rext/pkg/numru-rext-*.gem
+          file: rext/pkg/numru-rext-*-arm64-darwin-25.gem

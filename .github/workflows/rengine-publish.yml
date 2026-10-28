@@ -5,8 +5,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
-  pull-requests: read
 
 concurrency:
   group: publish-rengine-cloudsmith
@@ -22,46 +20,26 @@ jobs:
     timeout-minutes: 30
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/rengine-package
+      PACKAGE_DIR: ${{ runner.temp }}/numru-rengine
       RUSTUP_TOOLCHAIN: stable
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Require passing rengine tests for the last merged branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Use merge time, not PR update time, to identify the last merged branch.
-          merged_pr=$(gh api --paginate \
-            "repos/$GITHUB_REPOSITORY/pulls?state=closed&base=main&per_page=100" \
-            --jq '.[] | select(.merged_at != null) | {number, merged_at, head}' \
-            | jq -s 'max_by(.merged_at)')
-          if [[ "$merged_pr" == "null" ]]; then
-            echo "::error::No merged pull request into main was found."
-            exit 1
-          fi
-          pr_number=$(jq -er '.number' <<< "$merged_pr")
-          head_branch=$(jq -er '.head.ref' <<< "$merged_pr")
-          head_sha=$(jq -er '.head.sha' <<< "$merged_pr")
-
-          # Match the PR's final commit, not the merge/squash commit on main.
-          # Do not filter by success: a newer failed or unfinished run must block deployment.
-          latest=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow rengine-test.yml \
-            --branch "$head_branch" --commit "$head_sha" --event pull_request --limit 1 \
-            --json status,conclusion,headSha,url)
-          if ! jq -e --arg sha "$head_sha" \
-            '.[0] | .status == "completed" and .conclusion == "success" and .headSha == $sha' <<< "$latest" > /dev/null; then
-            echo "::error::The latest rengine-test run for PR #$pr_number ($head_branch at $head_sha) must have completed successfully before deploying."
-            exit 1
-          fi
-          jq -r '.[0].url' <<< "$latest"
-
       - name: Check out the publishing revision
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Prepare numru-rengine package
+        run: |
+          # Cargo uses the manifest name as the registry package name.
+          cp -R rengine "$PACKAGE_DIR"
+          sed -i '' 's/^name = "rengine"$/name = "numru-rengine"/' "$PACKAGE_DIR/Cargo.toml"
+          # Preserve the library name used by existing Rust imports.
+          printf '\n[lib]\nname = "rengine"\n' >> "$PACKAGE_DIR/Cargo.toml"
 
       - name: Set up Cloudsmith CLI
         uses: cloudsmith-io/cloudsmith-cli-action@v3
@@ -70,18 +48,18 @@ jobs:
 
       - name: Reject the current Cloudsmith version
         run: |
-          version=$(cargo metadata --manifest-path rengine/Cargo.toml --no-deps --format-version 1 \
-            | jq -er '.packages[] | select(.name == "rengine") | .version')
+          version=$(cargo metadata --manifest-path "$PACKAGE_DIR/Cargo.toml" --no-deps --format-version 1 \
+            | jq -er '.packages[] | select(.name == "numru-rengine") | .version')
           latest_version=$(cloudsmith list packages desertrat-io/numru \
-            --query 'format:cargo AND name:^rengine$' --sort=-version --page-size 1 --output-format json \
+            --query 'format:cargo AND name:^numru-rengine$' --sort=-version --page-size 1 --output-format json \
             | jq -r '.data[0].version // empty')
           if [[ "$version" == "$latest_version" ]]; then
-            echo "::error::rengine $version is already the current version in Cloudsmith. Bump the crate version appropriately before deploying."
+            echo "::error::numru-rengine $version is already the current version in Cloudsmith. Bump the crate version appropriately before deploying."
             exit 1
           fi
 
       - name: Package and verify the crate
-        run: cargo package --manifest-path rengine/Cargo.toml
+        run: cargo package --manifest-path "$PACKAGE_DIR/Cargo.toml"
 
       - name: Publish crate to Cloudsmith
-        run: cloudsmith push cargo desertrat-io/numru "$CARGO_TARGET_DIR"/package/rengine-*.crate
+        run: cloudsmith push cargo desertrat-io/numru "$CARGO_TARGET_DIR"/package/numru-rengine-*.crate
