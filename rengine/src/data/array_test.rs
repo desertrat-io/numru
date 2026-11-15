@@ -594,4 +594,284 @@ mod array_tests {
             }
         }
     }
+
+    #[test]
+    fn signed_f32_linspace_includes_both_endpoints() {
+        let array = SignedF32Array::linspace(0.0, 1.0, 5);
+        assert_eq!(array.len(), 5);
+        assert_eq!(array.slice(), &[0.0, 0.25, 0.5, 0.75, 1.0]);
+    }
+
+    #[test]
+    fn signed_f32_linspace_zero_count_is_empty() {
+        for (start, end) in [(0.0, 1.0), (1.0, -1.0), (2.0, 2.0)] {
+            let array = SignedF32Array::linspace(start, end, 0);
+            assert_eq!(array.len(), 0);
+            assert!(array.slice().is_empty());
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_one_count_preserves_start() {
+        for start in [
+            -3.5,
+            0.0,
+            -0.0,
+            f32::MIN,
+            f32::MAX,
+            f32::MIN_POSITIVE,
+            f32::from_bits(1),
+        ] {
+            let array = SignedF32Array::linspace(start, 7.0, 1);
+            assert_eq!(array.len(), 1);
+            assert_eq!(array.slice()[0].to_bits(), start.to_bits());
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_two_count_returns_endpoints() {
+        for (start, end) in [(2.0, 9.0), (9.0, 2.0), (-4.0, 3.0)] {
+            let array = SignedF32Array::linspace(start, end, 2);
+            assert_eq!(array.slice(), &[start, end]);
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_descends_and_crosses_zero() {
+        assert_eq!(
+            SignedF32Array::linspace(1.0, -1.0, 5).slice(),
+            &[1.0, 0.5, 0.0, -0.5, -1.0]
+        );
+        assert_eq!(
+            SignedF32Array::linspace(-1.0, 1.0, 5).slice(),
+            &[-1.0, -0.5, 0.0, 0.5, 1.0]
+        );
+    }
+
+    #[test]
+    fn signed_f32_linspace_equal_bounds_repeat_value() {
+        for value in [-2.5, 0.0, f32::MIN, f32::MAX] {
+            for n in [2, 5, 64] {
+                let array = SignedF32Array::linspace(value, value, n);
+                assert_eq!(array.len(), n);
+                assert!(array.slice().iter().all(|&actual| actual == value));
+            }
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_fractional_spacing_with_even_count() {
+        let array = SignedF32Array::linspace(0.0, 1.0, 4);
+        let expected: [f32; 4] = [0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0];
+        assert_eq!(array.len(), expected.len());
+        for (&actual, expected) in array.slice().iter().zip(expected) {
+            assert!((actual - expected).abs() <= 4.0 * f32::EPSILON);
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_preserves_exact_endpoints_despite_rounding() {
+        for (start, end) in [(-1.0, 0.1), (0.1, -1.0)] {
+            let array = SignedF32Array::linspace(start, end, 4);
+            assert_eq!(array.slice()[0], start);
+            assert_eq!(array.slice()[3], end);
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_has_requested_length_and_contiguous_storage() {
+        for n in [0, 1, 2, 3, 16, 65, 1025] {
+            let array = SignedF32Array::linspace(-2.0, 2.0, n);
+            let values = array.slice();
+            assert_eq!(array.len(), n);
+            assert_eq!(values.len(), n);
+            for (i, value) in values.iter().enumerate() {
+                assert_eq!(value as *const f32, values.as_ptr().wrapping_add(i));
+            }
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_preserves_subnormal_samples() {
+        let tiny = f32::from_bits(1);
+        let array = SignedF32Array::linspace(0.0, tiny * 4.0, 5);
+        assert_eq!(
+            array.slice(),
+            &[0.0, tiny, tiny * 2.0, tiny * 3.0, tiny * 4.0]
+        );
+    }
+
+    // All expected samples are finite and representable. These regressions
+    // expose intermediate overflow without defining non-finite input policy.
+    #[test]
+    fn signed_f32_linspace_extreme_opposite_bounds_do_not_overflow_subtraction() {
+        let max = f32::MAX;
+        for (start, end) in [(-max, max), (max, -max)] {
+            let array = SignedF32Array::linspace(start, end, 3);
+            assert_eq!(array.slice(), &[start, 0.0, end]);
+        }
+    }
+
+    #[test]
+    fn signed_f32_linspace_extreme_distance_does_not_overflow_multiplication() {
+        let max = f32::MAX;
+        for end in [max, -max] {
+            let array = SignedF32Array::linspace(0.0, end, 5);
+            let expected = [0.0, end / 4.0, end / 2.0, (end / 4.0) * 3.0, end];
+            assert_eq!(array.len(), expected.len());
+            for (&actual, expected) in array.slice().iter().zip(expected) {
+                assert!(actual.is_finite(), "non-finite sample: {actual}");
+                // Normalize before subtracting to avoid overflow in the assertion.
+                assert!((actual / max - expected / max).abs() <= 4.0 * f32::EPSILON);
+            }
+            assert_eq!(array.slice()[4], end);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "capacity overflow")]
+    fn signed_f32_linspace_rejects_unrepresentable_allocation_size() {
+        // Vec rejects this layout before allocation; do not attempt an OOM test.
+        SignedF32Array::linspace(0.0, 1.0, usize::MAX);
+    }
+
+    #[test]
+    fn signed_f64_linspace_includes_both_endpoints() {
+        let array = SignedF64Array::linspace(0.0, 1.0, 5);
+        assert_eq!(array.len(), 5);
+        assert_eq!(array.slice(), &[0.0, 0.25, 0.5, 0.75, 1.0]);
+    }
+
+    #[test]
+    fn signed_f64_linspace_zero_count_is_empty() {
+        for (start, end) in [(0.0, 1.0), (1.0, -1.0), (2.0, 2.0)] {
+            let array = SignedF64Array::linspace(start, end, 0);
+            assert_eq!(array.len(), 0);
+            assert!(array.slice().is_empty());
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_one_count_preserves_start() {
+        for start in [
+            -3.5,
+            0.0,
+            -0.0,
+            f64::MIN,
+            f64::MAX,
+            f64::MIN_POSITIVE,
+            f64::from_bits(1),
+        ] {
+            let array = SignedF64Array::linspace(start, 7.0, 1);
+            assert_eq!(array.len(), 1);
+            assert_eq!(array.slice()[0].to_bits(), start.to_bits());
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_two_count_returns_endpoints() {
+        for (start, end) in [(2.0, 9.0), (9.0, 2.0), (-4.0, 3.0)] {
+            let array = SignedF64Array::linspace(start, end, 2);
+            assert_eq!(array.slice(), &[start, end]);
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_descends_and_crosses_zero() {
+        assert_eq!(
+            SignedF64Array::linspace(1.0, -1.0, 5).slice(),
+            &[1.0, 0.5, 0.0, -0.5, -1.0]
+        );
+        assert_eq!(
+            SignedF64Array::linspace(-1.0, 1.0, 5).slice(),
+            &[-1.0, -0.5, 0.0, 0.5, 1.0]
+        );
+    }
+
+    #[test]
+    fn signed_f64_linspace_equal_bounds_repeat_value() {
+        for value in [-2.5, 0.0, f64::MIN, f64::MAX] {
+            for n in [2, 5, 64] {
+                let array = SignedF64Array::linspace(value, value, n);
+                assert_eq!(array.len(), n);
+                assert!(array.slice().iter().all(|&actual| actual == value));
+            }
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_fractional_spacing_with_even_count() {
+        let array = SignedF64Array::linspace(0.0, 1.0, 4);
+        let expected: [f64; 4] = [0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0];
+        assert_eq!(array.len(), expected.len());
+        for (&actual, expected) in array.slice().iter().zip(expected) {
+            assert!((actual - expected).abs() <= 4.0 * f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_preserves_exact_endpoints_despite_rounding() {
+        for (start, end) in [(-1.0, 0.1), (0.1, -1.0)] {
+            let array = SignedF64Array::linspace(start, end, 4);
+            assert_eq!(array.slice()[0], start);
+            assert_eq!(array.slice()[3], end);
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_has_requested_length_and_contiguous_storage() {
+        for n in [0, 1, 2, 3, 16, 65, 1025] {
+            let array = SignedF64Array::linspace(-2.0, 2.0, n);
+            let values = array.slice();
+            assert_eq!(array.len(), n);
+            assert_eq!(values.len(), n);
+            for (i, value) in values.iter().enumerate() {
+                assert_eq!(value as *const f64, values.as_ptr().wrapping_add(i));
+            }
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_preserves_subnormal_samples() {
+        let tiny = f64::from_bits(1);
+        let array = SignedF64Array::linspace(0.0, tiny * 4.0, 5);
+        assert_eq!(
+            array.slice(),
+            &[0.0, tiny, tiny * 2.0, tiny * 3.0, tiny * 4.0]
+        );
+    }
+
+    // All expected samples are finite and representable. These regressions
+    // expose intermediate overflow without defining non-finite input policy.
+    #[test]
+    fn signed_f64_linspace_extreme_opposite_bounds_do_not_overflow_subtraction() {
+        let max = f64::MAX;
+        for (start, end) in [(-max, max), (max, -max)] {
+            let array = SignedF64Array::linspace(start, end, 3);
+            assert_eq!(array.slice(), &[start, 0.0, end]);
+        }
+    }
+
+    #[test]
+    fn signed_f64_linspace_extreme_distance_does_not_overflow_multiplication() {
+        let max = f64::MAX;
+        for end in [max, -max] {
+            let array = SignedF64Array::linspace(0.0, end, 5);
+            let expected = [0.0, end / 4.0, end / 2.0, (end / 4.0) * 3.0, end];
+            assert_eq!(array.len(), expected.len());
+            for (&actual, expected) in array.slice().iter().zip(expected) {
+                assert!(actual.is_finite(), "non-finite sample: {actual}");
+                // Normalize before subtracting to avoid overflow in the assertion.
+                assert!((actual / max - expected / max).abs() <= 4.0 * f64::EPSILON);
+            }
+            assert_eq!(array.slice()[4], end);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "capacity overflow")]
+    fn signed_f64_linspace_rejects_unrepresentable_allocation_size() {
+        // Vec rejects this layout before allocation; do not attempt an OOM test.
+        SignedF64Array::linspace(0.0, 1.0, usize::MAX);
+    }
 }
