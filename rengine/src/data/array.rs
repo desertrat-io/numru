@@ -1,16 +1,17 @@
-use std::usize;
-
 pub const CONTIGUOUS_STRIDE: i32 = 1;
 
 #[derive(Debug, Clone, Default)]
 pub struct Array<T> {
     // TODO: was reading around, consider Box<[T]> instead of Vec<T> for memory utilization optimization
     data: Vec<T>,
+    shape: Vec<usize>,
 }
 
 impl<T: Default + Clone> Array<T> {
     pub fn new(data: Vec<T>) -> Self {
-        Self { data }
+        // using this constructor can only create a 1d vector, so the shape is a single scalar vector representing the length
+        let shape = vec![data.len()];
+        Self { data, shape }
     }
 
     pub fn slice(&self) -> &[T] {
@@ -25,8 +26,38 @@ impl<T: Default + Clone> Array<T> {
         self.data.len()
     }
 
+    pub fn shape(&self) -> &[usize] {
+        self.shape.as_slice()
+    }
+
     pub fn default_padded(len: usize) -> Self {
         Self::new(vec![T::default(); len])
+    }
+
+    pub fn reshape_cp(original: &Array<T>, shape: &[usize]) -> Self {
+        // 0 element 1d vector
+        let actual_length = original.len();
+        if actual_length == 0 && shape.contains(&0) {
+            return Self {
+                data: vec![],
+                shape: shape.to_vec(),
+            };
+        }
+        if actual_length > 0 && shape.contains(&0) {
+            panic!("Invalid shape, vector is not empty")
+        }
+        let mut final_length: usize = 1;
+        for dim in shape {
+            final_length = final_length.checked_mul(*dim).expect("shape overflow");
+        }
+
+        if final_length != actual_length {
+            panic!("Invalid shape, vector length does not match shape requirements")
+        }
+        Self {
+            data: original.data.clone(),
+            shape: shape.to_vec(),
+        }
     }
 }
 
