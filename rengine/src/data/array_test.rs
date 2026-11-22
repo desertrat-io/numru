@@ -875,3 +875,76 @@ mod array_tests {
         SignedF64Array::linspace(0.0, 1.0, usize::MAX);
     }
 }
+
+macro_rules! reshape_tests {
+    ($module:ident, $array:ty, $values:expr, $replacement:expr) => {
+        mod $module {
+            use super::*;
+
+            #[test]
+            fn copies_elements_in_order_into_independent_storage() {
+                let values = $values;
+                let original = <$array>::new(values.to_vec());
+                let mut reshaped = <$array>::reshape_cp(&original, &[2, 3]);
+
+                assert_eq!(reshaped.shape(), &[2, 3]);
+                assert_eq!(reshaped.slice(), &values);
+                reshaped.mut_slice()[0] = $replacement;
+                assert_eq!(original.shape(), &[6]);
+                assert_eq!(original.slice(), &values);
+            }
+
+            #[test]
+            fn reshapes_empty_1d_array() {
+                let original = <$array>::new(vec![]);
+                assert_eq!(original.shape(), &[0]);
+
+                let reshaped = <$array>::reshape_cp(&original, &[0]);
+
+                assert_eq!(reshaped.shape(), &[0]);
+                assert!(reshaped.slice().is_empty());
+            }
+
+            #[test]
+            #[should_panic(expected = "shape overflow")]
+            fn rejects_shape_product_overflow() {
+                let original = <$array>::new(($values).to_vec());
+                <$array>::reshape_cp(&original, &[usize::MAX, 2]);
+            }
+
+            #[test]
+            #[should_panic(expected = "Invalid shape")]
+            fn rejects_element_count_mismatch() {
+                let original = <$array>::new(($values).to_vec());
+                <$array>::reshape_cp(&original, &[2, 2]);
+            }
+
+            #[test]
+            #[should_panic]
+            fn rejects_zero_length_shape_for_nonempty_array() {
+                let original = <$array>::new(($values).to_vec());
+                <$array>::reshape_cp(&original, &[0]);
+            }
+        }
+    };
+}
+
+reshape_tests!(reshape_i32, SignedInt32Array, [-3, -2, -1, 0, 1, 2], 9);
+reshape_tests!(
+    reshape_bool,
+    BoolArray,
+    [false, true, true, false, true, false],
+    true
+);
+reshape_tests!(
+    reshape_f32,
+    SignedF32Array,
+    [-1.5, 0.0, 0.5, 1.0, 2.0, 3.0],
+    9.0
+);
+reshape_tests!(
+    reshape_f64,
+    SignedF64Array,
+    [-1.5, 0.0, 0.5, 1.0, 2.0, 3.0],
+    9.0
+);
