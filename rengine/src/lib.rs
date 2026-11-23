@@ -39,6 +39,10 @@ pub mod data {
     pub mod matrix;
     #[cfg(test)]
     mod matrix_test;
+
+    pub mod tensor;
+    #[cfg(test)]
+    mod tensor_test;
 }
 
 pub mod logic {
