@@ -60,4 +60,4 @@ impl<T: Default + Clone> Tensor<T> {
 pub type SignedF32Tensor = Tensor<f32>;
 pub type SignedF64Tensor = Tensor<f64>;
 pub type SignedInt32Tensor = Tensor<i32>;
-pub type BoolArray = Tensor<bool>;
+pub type BoolTensor = Tensor<bool>;

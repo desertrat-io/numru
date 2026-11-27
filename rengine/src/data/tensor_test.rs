@@ -1,7 +1,5 @@
 use crate::data::array::{BoolArray, SignedF32Array, SignedF64Array, SignedInt32Array};
-use crate::data::tensor::{
-    BoolArray as BoolTensor, SignedF32Tensor, SignedF64Tensor, SignedInt32Tensor,
-};
+use crate::data::tensor::{BoolTensor, SignedF32Tensor, SignedF64Tensor, SignedInt32Tensor};
 
 #[test]
 fn creates_f32_scalar() {
@@ -274,7 +272,9 @@ fn assert_flattened_copy<T: Default + Clone + PartialEq + std::fmt::Debug>(
 #[test]
 fn flatten_copies_high_rank_f32_tensor() {
     let shape = [2, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 2];
-    let values = [-3.5, -2.0, -1.25, 0.0, 0.5, 1.0, 1.25, 2.0, 3.5, 4.0, 5.5, 8.0];
+    let values = [
+        -3.5, -2.0, -1.25, 0.0, 0.5, 1.0, 1.25, 2.0, 3.5, 4.0, 5.5, 8.0,
+    ];
     let tensor = SignedF32Tensor::new(SignedF32Array::new(values.to_vec()), &shape);
 
     assert_flattened_copy(&tensor, &shape, &values, 99.0);
