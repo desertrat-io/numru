@@ -37,6 +37,12 @@ impl<T: Default + Clone> Tensor<T> {
         &self.shape
     }
 
+    pub fn flatten(&self) -> Array<T> {
+        // the backing Array is already in row major order
+        // so cloning it and returning that performs the flatten operation for free
+        self.data.clone()
+    }
+
     fn valid_shape(data: &Array<T>, shape: &[usize]) -> bool {
         let actual_length = data.len();
         if actual_length > 0 && shape.contains(&0) {
